@@ -19,6 +19,7 @@ import ReactionRemovedNotificationsTask from "../tasks/ReactionRemovedNotificati
 import DocumentAccessRequestNotificationsTask from "../tasks/DocumentAccessRequestNotificationsTask";
 import DocumentAddGroupNotificationsTask from "../tasks/DocumentAddGroupNotificationsTask";
 import DocumentAddUserNotificationsTask from "../tasks/DocumentAddUserNotificationsTask";
+import DocumentMentionedNotificationsTask from "../tasks/DocumentMentionedNotificationsTask";
 import DocumentPublishedNotificationsTask from "../tasks/DocumentPublishedNotificationsTask";
 import RevisionCreatedNotificationsTask from "../tasks/RevisionCreatedNotificationsTask";
 import ShareSubscriptionNotificationsTask from "../tasks/ShareSubscriptionNotificationsTask";
@@ -27,6 +28,7 @@ import BaseProcessor from "./BaseProcessor";
 export default class NotificationsProcessor extends BaseProcessor {
   static applicableEvents: Event["name"][] = [
     "documents.publish",
+    "documents.update",
     "documents.add_user",
     "documents.add_group",
     "access_requests.create",
@@ -43,6 +45,8 @@ export default class NotificationsProcessor extends BaseProcessor {
     switch (event.name) {
       case "documents.publish":
         return this.documentPublished(event);
+      case "documents.update":
+        return this.documentUpdated(event);
       case "documents.add_user":
         return this.documentAddUser(event);
       case "documents.add_group":
@@ -74,6 +78,14 @@ export default class NotificationsProcessor extends BaseProcessor {
     }
 
     await new DocumentPublishedNotificationsTask().schedule(event);
+  }
+
+  async documentUpdated(event: DocumentEvent) {
+    // Only mentions are notified here. Revisions and the generic "document
+    // updated" notification still go through the debounce in DebounceProcessor
+    // so that a burst of edits collapses into one of each. Running on every
+    // save is safe because each mention is claimed before it is delivered.
+    await new DocumentMentionedNotificationsTask().schedule(event);
   }
 
   async documentAddUser(event: DocumentUserEvent) {

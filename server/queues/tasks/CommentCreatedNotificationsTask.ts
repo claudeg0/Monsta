@@ -60,7 +60,6 @@ export default class CommentCreatedNotificationsTask extends BaseTask<CommentEve
       if (
         mention.actorId &&
         recipient &&
-        recipient.id !== mention.actorId &&
         recipient.subscribedToEventType(
           NotificationEventType.MentionedInComment
         ) &&

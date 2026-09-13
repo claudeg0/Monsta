@@ -201,8 +201,8 @@ const StyledSwitchRoot = styled(RadixSwitch.Root)<{
   }
 
   [dir="rtl"]
-    &:hover:not(:disabled)[data-state="checked"]
-    ${StyledSwitchThumb} {
+  &:hover:not(:disabled)[data-state="checked"]
+  ${StyledSwitchThumb} {
     transform: translateX(
       ${(props) => -(props.width - props.height - HOVER_EXTRA)}px
     );

@@ -23,3 +23,5 @@ data/*
 !.yarn/releases
 .yarn/releases
 !.yarn/sdks
+.env.development
+CLAUDE.local.md

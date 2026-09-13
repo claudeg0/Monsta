@@ -61,6 +61,10 @@ function Notifications() {
     },
     {
       event: NotificationEventType.MentionedInComment,
+      // This single toggle covers mentions in both comments and documents, so
+      // it must keep both event types in sync – see `pairedEvents` handling in
+      // `handleChange`.
+      pairedEvents: [NotificationEventType.MentionedInDocument],
       icon: <EmailIcon />,
       title: t("Mentioned"),
       description: t(
@@ -69,6 +73,7 @@ function Notifications() {
     },
     {
       event: NotificationEventType.GroupMentionedInDocument,
+      pairedEvents: [NotificationEventType.GroupMentionedInComment],
       icon: <GroupIcon />,
       title: t("Group mentions"),
       description: t(
@@ -162,10 +167,19 @@ function Notifications() {
   }, 500);
 
   const handleChange = React.useCallback(
-    (eventType: NotificationEventType) => async (checked: boolean) => {
-      await user.setNotificationEventType(eventType, checked);
-      showSuccessMessage();
-    },
+    (
+      eventType: NotificationEventType,
+      pairedEvents: NotificationEventType[] = []
+    ) =>
+      async (checked: boolean) => {
+        // A toggle may represent more than one underlying event type, for
+        // example "Mentioned" covers mentions in both documents and comments.
+        // All of them are written so the pair can never drift out of sync.
+        for (const type of [eventType, ...pairedEvents]) {
+          await user.setNotificationEventType(type, checked);
+        }
+        showSuccessMessage();
+      },
     [user, showSuccessMessage]
   );
 
@@ -174,7 +188,9 @@ function Notifications() {
       runInAction(() => {
         const updated = { ...user.notificationSettings };
         for (const option of visibleOptions) {
-          updated[option.event] = checked;
+          for (const type of [option.event, ...(option.pairedEvents ?? [])]) {
+            updated[type] = checked;
+          }
         }
         user.notificationSettings = updated;
       });
@@ -243,7 +259,7 @@ function Notifications() {
               id={option.event}
               name={option.event}
               checked={!!setting}
-              onChange={handleChange(option.event)}
+              onChange={handleChange(option.event, option.pairedEvents)}
             />
           </SettingRow>
         );

@@ -258,6 +258,26 @@ export class Environment {
   );
 
   /**
+   * Overrides the origin used to load Vite dev server assets in development.
+   * By default this is derived by swapping the port of URL for 3001, which
+   * assumes the Vite dev server is reachable on the same hostname. Set this
+   * when a proxy or tunnel exposes it at a different origin instead, for
+   * example when routing to the Vite dev server is done by path rather than
+   * port.
+   */
+  @IsOptional()
+  @IsUrl({
+    protocols: ["http", "https"],
+    require_protocol: true,
+    require_tld: false,
+  })
+  public VITE_DEV_URL = this.toOptionalString(
+    environment.VITE_DEV_URL
+      ? environment.VITE_DEV_URL.replace(/\/$/, "")
+      : undefined
+  );
+
+  /**
    * The fully qualified, external facing domain name of the collaboration
    * service, if different (unlikely)
    */

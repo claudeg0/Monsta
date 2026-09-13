@@ -18,6 +18,7 @@ import {
   GroupUser,
 } from "@server/models";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
+import { claimMentionNotification } from "@server/models/helpers/MentionNotificationHelper";
 import NotificationHelper from "@server/models/helpers/NotificationHelper";
 import type { RevisionEvent } from "@server/types";
 import { canUserAccessDocument } from "@server/utils/permissions";
@@ -63,7 +64,6 @@ export default class RevisionCreatedNotificationsTask extends BaseTask<RevisionE
 
       if (
         !recipient ||
-        recipient.id === mention.actorId ||
         !(await canUserAccessDocument(recipient, document.id))
       ) {
         continue;
@@ -76,15 +76,23 @@ export default class RevisionCreatedNotificationsTask extends BaseTask<RevisionE
           NotificationEventType.MentionedInDocument
         )
       ) {
-        await Notification.create({
-          event: NotificationEventType.MentionedInDocument,
-          userId: recipient.id,
-          revisionId: event.modelId,
-          actorId: mention.actorId,
-          teamId: document.teamId,
-          documentId: document.id,
-        });
+        // Mentions are normally delivered immediately on save by
+        // DocumentMentionedNotificationsTask rather than waiting for this
+        // revision. Claiming keeps this path as a fallback for revisions that
+        // arrive by another route, without sending a duplicate.
+        if (await claimMentionNotification(mention.id)) {
+          await Notification.create({
+            event: NotificationEventType.MentionedInDocument,
+            userId: recipient.id,
+            revisionId: event.modelId,
+            actorId: mention.actorId,
+            teamId: document.teamId,
+            documentId: document.id,
+          });
+        }
 
+        // Recorded either way so a mentioned user is not also sent the generic
+        // "document updated" notification below.
         userIdsMentioned.push(recipient.id);
       }
     }
@@ -113,6 +121,13 @@ export default class RevisionCreatedNotificationsTask extends BaseTask<RevisionE
       // Check if the group has mentions disabled
       const groupModel = await Group.findByPk(group.modelId);
       if (groupModel?.disableMentions) {
+        continue;
+      }
+
+      // As above, the group mention has almost certainly been delivered
+      // already by DocumentMentionedNotificationsTask.
+      if (!(await claimMentionNotification(group.id))) {
+        mentionedGroup.push(group.modelId);
         continue;
       }
 
