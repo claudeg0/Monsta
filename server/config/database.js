@@ -11,6 +11,13 @@ const shared = {
 module.exports = {
   development: shared,
   test: shared,
+  // Use with: node_modules/.bin/sequelize <command> --env production-ssl-disabled
+  // Needed because sequelize-cli reads its own DB config separately
+  // from the app's runtime PGSSLMODE handling, and defaults to
+  // requiring SSL under NODE_ENV=production. Without this --env flag,
+  // any manual sequelize-cli migration command against a
+  // production-mode container (QA or, eventually, prod) will fail
+  // with an SSL connection error even though the app itself boots fine.
   "production-ssl-disabled": shared,
   production: {
     ...shared,
