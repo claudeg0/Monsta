@@ -8,6 +8,7 @@ import Text from "../Text";
 import { Overlay } from "./components/Overlay";
 import { m } from "framer-motion";
 import useMeasure from "react-use-measure";
+import { useVisibleViewportVars } from "~/hooks/useVisualViewport";
 
 /** Root Drawer component - all the other components are rendered inside it. */
 const Drawer = (props: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
@@ -27,6 +28,11 @@ const DrawerContent = React.forwardRef<
 >((props, ref) => {
   const { children, ...rest } = props;
   const [measureRef, bounds] = useMeasure();
+
+  // A drawer is anchored to the bottom of the screen and is typically opened
+  // alongside the keyboard, so it has to be sized and positioned against the
+  // visible area rather than the layout viewport. See StyledContent below.
+  useVisibleViewportVars();
 
   return (
     <DrawerPrimitive.Portal>
@@ -89,11 +95,15 @@ const StyledContent = styled(m.div)`
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* A fixed element is anchored to the layout viewport, which on iOS does not
+   * shrink when the keyboard opens — without this the drawer sits behind it. */
+  bottom: var(--keyboard-inset, 0px);
   min-width: 180px;
   max-width: 100%;
   min-height: 44px;
-  max-height: 90vh;
+  /* vh ignores the software keyboard on iOS, so the visible height wins when
+   * it is smaller. Falls back to the vh behavior when the property is absent. */
+  max-height: min(90vh, var(--visible-height, 90vh));
 
   ${borderRadius(8)}
 

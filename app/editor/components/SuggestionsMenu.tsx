@@ -1319,7 +1319,10 @@ const Empty = styled.div`
 `;
 
 const MobileScrollable = styled(Scrollable)`
-  max-height: 75vh;
+  /* As with the drawer, vh ignores the software keyboard on iOS. The subtracted
+   * allowance leaves room for the drawer's own handle, title and padding so the
+   * list does not overflow its container. */
+  max-height: min(75vh, calc(var(--visible-height, 75vh) - 72px));
 `;
 
 export default SuggestionsMenu;

@@ -43,8 +43,15 @@ export function isMobile(): boolean {
   return window.matchMedia?.(`(max-width: ${736}px)`)?.matches;
 }
 
+function toFinitePx(value: string): number {
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 /**
- * Returns the safe area insets for the current device.
+ * Returns the safe area insets for the current device. Values that cannot be
+ * parsed resolve to zero, so callers can use the result in arithmetic without
+ * risking NaN propagating into a style declaration.
  */
 export function getSafeAreaInsets(): {
   top: number;
@@ -58,10 +65,10 @@ export function getSafeAreaInsets(): {
 
   if (supportsEnv) {
     return {
-      top: parseFloat(style.getPropertyValue("--sat") || "0"),
-      right: parseFloat(style.getPropertyValue("--sar") || "0"),
-      bottom: parseFloat(style.getPropertyValue("--sab") || "0"),
-      left: parseFloat(style.getPropertyValue("--sal") || "0"),
+      top: toFinitePx(style.getPropertyValue("--sat")),
+      right: toFinitePx(style.getPropertyValue("--sar")),
+      bottom: toFinitePx(style.getPropertyValue("--sab")),
+      left: toFinitePx(style.getPropertyValue("--sal")),
     };
   }
 
