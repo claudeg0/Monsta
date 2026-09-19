@@ -1,5 +1,5 @@
 import { observer } from "mobx-react";
-import { SearchIcon, HomeIcon, SidebarIcon } from "outline-icons";
+import { CommentIcon, SearchIcon, HomeIcon, SidebarIcon } from "outline-icons";
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
   DragActiveProvider,
@@ -19,7 +19,7 @@ import usePolicy from "~/hooks/usePolicy";
 import useStores from "~/hooks/useStores";
 import TeamMenu from "~/menus/TeamMenu";
 import * as Scenes from "~/routes/scenes";
-import { homePath, searchPath } from "~/utils/routeHelpers";
+import { chatPath, homePath, searchPath } from "~/utils/routeHelpers";
 import TeamLogo from "../TeamLogo";
 import Tooltip from "../Tooltip";
 import Sidebar from "./Sidebar";
@@ -43,12 +43,25 @@ import useMobile from "~/hooks/useMobile";
 
 function AppSidebar() {
   const { t } = useTranslation();
-  const { documents, ui, collections } = useStores();
+  const { documents, ui, collections, channels } = useStores();
   const team = useCurrentTeam();
   const user = useCurrentUser();
   const can = usePolicy(team);
   const history = useHistory();
   const isMobile = useMobile();
+
+  // Fetched here rather than only in the Chat scene: the indicator has to be
+  // right on first paint of any page, otherwise it only ever appears after
+  // the user has already visited chat - by which point they've seen the
+  // messages it was meant to tell them about. Live increments then arrive
+  // over the websocket (see WebsocketProvider's messages.create handler).
+  useEffect(() => {
+    void channels.fetchPage();
+  }, [channels]);
+
+  const hasUnreadMessages = channels.orderedData.some(
+    (channel) => channel.isUnread
+  );
 
   const handleSearchClick = useCallback(() => {
     const basePath = searchPath();
@@ -135,6 +148,14 @@ function AppSidebar() {
               exact={false}
               onClick={handleSearchClick}
               onClickIntent={Scenes.Search.preload}
+            />
+            <SidebarLink
+              to={chatPath()}
+              icon={<CommentIcon />}
+              label={t("Chat")}
+              exact={false}
+              unreadBadge={hasUnreadMessages}
+              onClickIntent={Scenes.Chat.preload}
             />
             {can.createDocument && <DraftsLink />}
           </Section>

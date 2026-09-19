@@ -22,6 +22,7 @@ import type {
   ApiKey,
   Attachment,
   AuthenticationProvider,
+  Channel,
   FileOperation,
   Revision,
   Team,
@@ -36,6 +37,7 @@ import type {
   Group,
   Integration,
   Comment,
+  Message,
   Subscription,
   View,
   Notification,
@@ -409,6 +411,31 @@ export type CommentEvent =
     })
   | CommentReactionEvent;
 
+export type ChannelEvent =
+  | (BaseEvent<Channel> & {
+      name: "channels.create";
+      modelId: string;
+      teamId: string;
+      actorId: string;
+    })
+  // Membership changes. `modelId` is the channel (ChannelMembership overrides
+  // it for exactly this reason) and `userId` is whoever was added or left -
+  // between them the socket layer can move that user in or out of the
+  // channel's room.
+  | (BaseEvent<Channel> & {
+      name: "channels.add_user" | "channels.remove_user";
+      modelId: string;
+      userId: string;
+      teamId: string;
+      actorId: string;
+    });
+
+export type MessageEvent = BaseEvent<Message> & {
+  name: "messages.create" | "messages.update" | "messages.delete";
+  modelId: string;
+  actorId: string;
+};
+
 export type StarEvent = BaseEvent<Star> & {
   name: "stars.create" | "stars.update" | "stars.delete";
   modelId: string;
@@ -503,6 +530,8 @@ export type Event =
   | DocumentGroupEvent
   | PinEvent
   | CommentEvent
+  | ChannelEvent
+  | MessageEvent
   | StarEvent
   | CollectionEvent
   | CollectionUserEvent

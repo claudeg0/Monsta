@@ -176,6 +176,23 @@ export default class UsersStore extends Store<User> {
     return queriedUsers(users, query);
   };
 
+  /**
+   * Returns active team members for a chat participant picker, excluding
+   * the given ids (already-selected participants and, typically, the
+   * current user themselves) and optionally filtered by a query. Unlike
+   * notInDocument/notInCollection this has no "invite by email" or group
+   * suggestion - a chat participant must already be a team member.
+   *
+   * @param excludeIds ids to leave out of the results
+   * @param query optional search query
+   * @returns A list of eligible users
+   */
+  forChatPicker = (excludeIds: string[], query = "") => {
+    const excludeSet = new Set(excludeIds);
+    const users = this.activeOrInvited.filter((user) => !excludeSet.has(user.id));
+    return queriedUsers(users, query);
+  };
+
   notInGroup = (groupId: string, query = "") => {
     const groupUsers = this.rootStore.groupUsers.orderedData.filter(
       (member) => member.groupId === groupId

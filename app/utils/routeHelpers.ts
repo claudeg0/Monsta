@@ -35,6 +35,16 @@ export function draftsPath(): string {
 }
 
 /**
+ * Returns the path to the chat screen, optionally for a specific channel.
+ *
+ * @param channelId the id of the channel to open, if any.
+ * @returns the path to the chat screen.
+ */
+export function chatPath(channelId?: string): string {
+  return channelId ? `/chat/${channelId}` : "/chat";
+}
+
+/**
  * Returns the path to the archive screen.
  *
  * @returns the archive path.

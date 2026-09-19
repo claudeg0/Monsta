@@ -82,6 +82,12 @@ export function readVisualViewport(): VisualViewportBand {
  *   `position: fixed; bottom: 0` element is anchored to the layout viewport,
  *   which on iOS does not shrink for the keyboard, so such an element is left
  *   behind it. Use `bottom: var(--keyboard-inset, 0px)` to lift it clear.
+ * - `--visual-top`: distance from the top of the layout viewport down to the
+ *   top of the visible area. Nonzero whenever iOS has panned the page under
+ *   the visual viewport — which it does on its own when an input takes focus.
+ *   A `position: fixed` element is anchored to the layout viewport and so is
+ *   panned out of sight along with everything else; pair it with
+ *   `top: var(--visual-top, 0px)` to keep the element in the visible band.
  *
  * Both resolve to their no-keyboard values when the keyboard is closed, so the
  * properties are safe to reference unconditionally.
@@ -111,6 +117,7 @@ export function useVisibleViewportVars(): void {
         `${Math.round(band.height)}px`
       );
       root.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+      root.style.setProperty("--visual-top", `${Math.round(band.top)}px`);
       frame = requestAnimationFrame(tick);
     });
 
@@ -118,6 +125,7 @@ export function useVisibleViewportVars(): void {
       cancelAnimationFrame(frame);
       root.style.removeProperty("--visible-height");
       root.style.removeProperty("--keyboard-inset");
+      root.style.removeProperty("--visual-top");
     };
   }, []);
 }

@@ -1,5 +1,7 @@
 import type { ActionContext } from "~/types";
 
+export const ChatSection = ({ t }: ActionContext) => t("Chat");
+
 export const CollectionSection = ({ t }: ActionContext) => t("Collection");
 
 export const CollectionsSection = ({ t }: ActionContext) => t("Collections");

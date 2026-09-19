@@ -4,6 +4,8 @@ import pluralize from "pluralize";
 import ApiKeysStore from "./ApiKeysStore";
 import AuthStore from "./AuthStore";
 import AuthenticationProvidersStore from "./AuthenticationProvidersStore";
+import ChannelsStore from "./ChannelsStore";
+import ChatPresenceStore from "./ChatPresenceStore";
 import CollectionsStore from "./CollectionsStore";
 import CommentsStore from "./CommentsStore";
 import DialogsStore from "./DialogsStore";
@@ -18,6 +20,7 @@ import GroupsStore from "./GroupsStore";
 import ImportsStore from "./ImportsStore";
 import IntegrationsStore from "./IntegrationsStore";
 import MembershipsStore from "./MembershipsStore";
+import MessagesStore from "./MessagesStore";
 import NotificationsStore from "./NotificationsStore";
 import OAuthAuthenticationsStore from "./OAuthAuthenticationsStore";
 import OAuthClientsStore from "./OAuthClientsStore";
@@ -41,6 +44,8 @@ export default class RootStore {
   apiKeys: ApiKeysStore;
   auth: AuthStore;
   authenticationProviders: AuthenticationProvidersStore;
+  channels: ChannelsStore;
+  chatPresence: ChatPresenceStore;
   collections: CollectionsStore;
   groupMemberships: GroupMembershipsStore;
   comments: CommentsStore;
@@ -53,6 +58,7 @@ export default class RootStore {
   imports: ImportsStore;
   integrations: IntegrationsStore;
   memberships: MembershipsStore;
+  messages: MessagesStore;
   notifications: NotificationsStore;
   oauthAuthentications: OAuthAuthenticationsStore;
   oauthClients: OAuthClientsStore;
@@ -77,6 +83,7 @@ export default class RootStore {
     // Models
     this.registerStore(ApiKeysStore);
     this.registerStore(AuthenticationProvidersStore);
+    this.registerStore(ChannelsStore);
     this.registerStore(CollectionsStore);
     this.registerStore(GroupMembershipsStore);
     this.registerStore(CommentsStore);
@@ -88,6 +95,7 @@ export default class RootStore {
     this.registerStore(ImportsStore);
     this.registerStore(IntegrationsStore);
     this.registerStore(MembershipsStore);
+    this.registerStore(MessagesStore);
     this.registerStore(NotificationsStore);
     this.registerStore(OAuthAuthenticationsStore, "oauthAuthentications");
     this.registerStore(OAuthClientsStore, "oauthClients");
@@ -108,6 +116,7 @@ export default class RootStore {
 
     // Non-models
     this.registerStore(DocumentPresenceStore, "presence");
+    this.registerStore(ChatPresenceStore, "chatPresence");
     this.registerStore(DialogsStore, "dialogs");
     this.registerStore(UiStore, "ui");
 
