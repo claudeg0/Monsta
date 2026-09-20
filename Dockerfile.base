@@ -7,7 +7,12 @@ COPY ./package.json ./yarn.lock ./.yarnrc.yml ./
 COPY ./patches ./patches
 
 RUN apt-get update && apt-get install -y cmake
-ENV NODE_OPTIONS="--max-old-space-size=24000"
+# Sized for the host this actually builds on (~11GB RAM, 2 cores), which also
+# runs production alongside the build. The upstream default of 24000 is more
+# than double the machine's physical memory, so it isn't a ceiling at all -
+# it lets the build grow until the OOM killer intervenes, and the largest
+# process on the box is production.
+ENV NODE_OPTIONS="--max-old-space-size=6144"
 
 RUN npm install -g corepack
 RUN corepack enable
