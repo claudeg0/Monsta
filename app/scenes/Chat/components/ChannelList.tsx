@@ -19,6 +19,8 @@ import { chatPath } from "~/utils/routeHelpers";
 import { openNewConversation } from "../openNewConversation";
 
 type Props = {
+  /** Whether the users referenced by direct-message channels are loading. */
+  isLoadingUsers: boolean;
   /** The currently-open channel, if any - highlighted in the list. */
   selectedChannelId?: string;
   /** Called when the user picks a channel to open. */
@@ -37,13 +39,23 @@ function useOtherParticipant(channel: Channel) {
   return otherUserId ? users.get(otherUserId) : undefined;
 }
 
-function ChannelListItem({
+/**
+ * An observer in its own right, not just a child of one. It reads
+ * `users.get(...)` via useOtherParticipant, and the users store is populated
+ * by a fetch that resolves *after* this first renders. ChannelList doesn't
+ * read that store, so without its own observer here nothing re-renders when
+ * the fetch lands and the row stays on its placeholder name until something
+ * unrelated forces a repaint - which is why it used to need a page refresh.
+ */
+const ChannelListItem = observer(function ChannelListItem_({
   channel,
+  isLoadingUsers,
   isSelected,
   onSelect,
   onDelete,
 }: {
   channel: Channel;
+  isLoadingUsers: boolean;
   isSelected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -54,8 +66,11 @@ function ChannelListItem({
   const otherUser = useOtherParticipant(channel);
 
   const isDirectMessage = channel.type === ChannelType.DirectMessage;
+  const isLoadingOtherUser =
+    isDirectMessage && !otherUser && isLoadingUsers;
   const title = isDirectMessage
-    ? (otherUser?.name ?? t("Unknown user"))
+    ? (otherUser?.name ??
+      (isLoadingOtherUser ? t("Loading…") : t("Unknown user")))
     : (channel.name ?? t("Unnamed group"));
 
   // Per the product decision: DMs get a per-user online dot, group
@@ -112,9 +127,13 @@ function ChannelListItem({
       </Item>
     </ChannelContextMenu>
   );
-}
+});
 
-function ChannelList({ selectedChannelId, onSelectChannel }: Props) {
+function ChannelList({
+  isLoadingUsers,
+  selectedChannelId,
+  onSelectChannel,
+}: Props) {
   const { t } = useTranslation();
   const { channels, dialogs } = useStores();
   const history = useHistory();
@@ -159,6 +178,7 @@ function ChannelList({ selectedChannelId, onSelectChannel }: Props) {
         <ChannelListItem
           key={channel.id}
           channel={channel}
+          isLoadingUsers={isLoadingUsers}
           isSelected={channel.id === selectedChannelId}
           onSelect={() => handleSelect(channel)}
           onDelete={() => handleDelete(channel)}

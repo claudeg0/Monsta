@@ -22,7 +22,18 @@ type Props = {
   channelId: string;
 };
 
-function MessageItem({ message }: { message: Message }) {
+/**
+ * An observer in its own right. Thread only tracks the message *collection*,
+ * so a change to a message's own fields - `data` when someone else edits it,
+ * or `createdBy` resolving once the users store loads - would otherwise never
+ * repaint this row. Editing your own message hides the problem, because local
+ * state forces a re-render anyway.
+ */
+const MessageItem = observer(function MessageItem_({
+  message,
+}: {
+  message: Message;
+}) {
   const { t } = useTranslation();
   const [isEditing, setEditing] = React.useState(false);
   const draft = React.useRef<ProsemirrorData | undefined>();
@@ -114,7 +125,7 @@ function MessageItem({ message }: { message: Message }) {
       {row}
     </MessageContextMenu>
   );
-}
+});
 
 function Thread({ channelId }: Props) {
   const { t } = useTranslation();

@@ -6,12 +6,14 @@ import { useHistory, useRouteMatch } from "react-router-dom";
 import styled, { css } from "styled-components";
 import { s } from "@shared/styles";
 import type Channel from "~/models/Channel";
+import { ChannelType } from "~/models/Channel";
 import Flex from "~/components/Flex";
 import Header from "~/components/Header";
 import NudeButton from "~/components/NudeButton";
 import PageTitle from "~/components/PageTitle";
 import Text from "~/components/Text";
 import Tooltip from "~/components/Tooltip";
+import useCurrentUser from "~/hooks/useCurrentUser";
 import useMobile from "~/hooks/useMobile";
 import { useVisibleViewportVars } from "~/hooks/useVisualViewport";
 import useStores from "~/hooks/useStores";
@@ -50,10 +52,12 @@ import { openNewConversation } from "./openNewConversation";
 function Chat() {
   const { t } = useTranslation();
   const { channels, dialogs, users } = useStores();
+  const currentUser = useCurrentUser();
   const history = useHistory();
   const match = useRouteMatch<{ channelId?: string }>();
   const channelId = match.params.channelId;
   const isMobile = useMobile();
+  const [isLoadingUsers, setIsLoadingUsers] = React.useState(true);
 
   useVisibleViewportVars();
 
@@ -82,13 +86,39 @@ function Chat() {
   }, [isMobile]);
 
   React.useEffect(() => {
-    void channels.fetchPage();
-    // Channels only carry member *ids* (see server/presenters/channel.ts) -
-    // without this, a DM's other participant renders as "Unknown user"
-    // until something else happens to populate the users store (e.g.
-    // opening the new-conversation picker, which loads it the same way).
-    void users.fetchPage();
-  }, [channels, users]);
+    let isMounted = true;
+
+    async function fetchChannelsAndParticipants() {
+      try {
+        const fetchedChannels = await channels.fetchPage();
+        const participantIds = [
+          ...new Set(
+            fetchedChannels
+              .filter((channel) => channel.type === ChannelType.DirectMessage)
+              .flatMap((channel) => channel.memberIds)
+              .filter((id) => id !== currentUser.id)
+          ),
+        ];
+
+        if (participantIds.length) {
+          await users.fetchPage({
+            ids: participantIds,
+            limit: participantIds.length,
+          });
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingUsers(false);
+        }
+      }
+    }
+
+    void fetchChannelsAndParticipants();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [channels, currentUser.id, users]);
 
   const handleSelectChannel = (channel: Channel) => {
     history.push(chatPath(channel.id));
@@ -151,6 +181,7 @@ function Chat() {
               </RailHeading>
             )}
             <ChannelList
+              isLoadingUsers={isLoadingUsers}
               selectedChannelId={channelId}
               onSelectChannel={handleSelectChannel}
             />
