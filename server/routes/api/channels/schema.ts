@@ -62,3 +62,15 @@ export const ChannelsLeaveSchema = BaseSchema.extend({
 });
 
 export type ChannelsLeaveReq = z.infer<typeof ChannelsLeaveSchema>;
+
+export const ChannelsStartCallSchema = BaseSchema.extend({
+  body: BaseIdSchema,
+});
+
+export type ChannelsStartCallReq = z.infer<typeof ChannelsStartCallSchema>;
+
+export const ChannelsEndCallSchema = BaseSchema.extend({
+  body: BaseIdSchema,
+});
+
+export type ChannelsEndCallReq = z.infer<typeof ChannelsEndCallSchema>;

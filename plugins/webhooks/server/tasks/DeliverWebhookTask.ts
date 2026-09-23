@@ -315,6 +315,8 @@ export default class DeliverWebhookTask extends BaseTask<Props> {
       case "channels.create":
       case "channels.add_user":
       case "channels.remove_user":
+      case "channels.call_started":
+      case "channels.call_ended":
       case "messages.create":
       case "messages.update":
       case "messages.delete":

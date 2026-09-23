@@ -4,6 +4,7 @@ import pluralize from "pluralize";
 import ApiKeysStore from "./ApiKeysStore";
 import AuthStore from "./AuthStore";
 import AuthenticationProvidersStore from "./AuthenticationProvidersStore";
+import CallStore from "./CallStore";
 import ChannelsStore from "./ChannelsStore";
 import ChatPresenceStore from "./ChatPresenceStore";
 import CollectionsStore from "./CollectionsStore";
@@ -44,6 +45,7 @@ export default class RootStore {
   apiKeys: ApiKeysStore;
   auth: AuthStore;
   authenticationProviders: AuthenticationProvidersStore;
+  callStore: CallStore;
   channels: ChannelsStore;
   chatPresence: ChatPresenceStore;
   collections: CollectionsStore;
@@ -117,6 +119,7 @@ export default class RootStore {
     // Non-models
     this.registerStore(DocumentPresenceStore, "presence");
     this.registerStore(ChatPresenceStore, "chatPresence");
+    this.registerStore(CallStore, "callStore");
     this.registerStore(DialogsStore, "dialogs");
     this.registerStore(UiStore, "ui");
 

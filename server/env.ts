@@ -503,6 +503,31 @@ export class Environment {
   public DROPBOX_APP_KEY = this.toOptionalString(environment.DROPBOX_APP_KEY);
 
   /**
+   * Daily.co API key for creating video call rooms and minting meeting
+   * tokens. Server-only - it must never reach the client.
+   */
+  @IsOptional()
+  public DAILY_API_KEY = this.toOptionalString(environment.DAILY_API_KEY);
+
+  /**
+   * Secret used to verify the HMAC signature on Daily webhook deliveries
+   * (the base64-encoded `hmac` from Daily's webhook API). Server-only - the
+   * daily.webhook endpoint returns 404 while this is unset.
+   */
+  @IsOptional()
+  public DAILY_WEBHOOK_SECRET = this.toOptionalString(
+    environment.DAILY_WEBHOOK_SECRET
+  );
+
+  /**
+   * Daily domain (e.g. "your-team.daily.co") used to build room URLs. The
+   * client gates all video call UI on this being set.
+   */
+  @Public
+  @IsOptional()
+  public DAILY_DOMAIN = this.toOptionalString(environment.DAILY_DOMAIN);
+
+  /**
    * Sentry DSN for capturing errors and frontend performance.
    */
   @Public

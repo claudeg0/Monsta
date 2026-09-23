@@ -14,8 +14,17 @@ allow(User, "createChannel", Team, (actor, team) =>
   and(isTeamModel(actor, team), !actor.isGuest, !actor.isViewer)
 );
 
-allow(User, ["read", "createMessage"], Channel, (actor, channel) =>
-  and(isTeamModel(actor, channel), isChannelMember(channel, actor.id))
+// Calls share the read boundary exactly: any channel member may start, join,
+// or end a call. There is deliberately no starter/creator/admin distinction
+// on endCall - the client only offers "End" to the last remaining
+// participant, and a server-side participant check would cost a provider
+// round-trip per end for no real gain among trusted team members.
+allow(
+  User,
+  ["read", "createMessage", "startCall", "endCall"],
+  Channel,
+  (actor, channel) =>
+    and(isTeamModel(actor, channel), isChannelMember(channel, actor.id))
 );
 
 // Only the channel creator (or a team admin) can rename/archive - any

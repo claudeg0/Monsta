@@ -2,6 +2,7 @@ import Router from "koa-router";
 import { Op, fn, col } from "sequelize";
 import type { Transaction } from "sequelize";
 import auth from "@server/middlewares/authentication";
+import { rateLimiter } from "@server/middlewares/rateLimiter";
 import { transaction } from "@server/middlewares/transaction";
 import validate from "@server/middlewares/validate";
 import { ValidationError } from "@server/errors";
@@ -10,6 +11,7 @@ import { ChannelType } from "@server/models/Channel";
 import { authorize } from "@server/policies";
 import { presentChannel, presentPolicies } from "@server/presenters";
 import type { APIContext } from "@server/types";
+import { RateLimiterStrategy } from "@server/utils/RateLimiter";
 import * as T from "./schema";
 
 const router = new Router();
@@ -388,6 +390,65 @@ router.post(
     }
 
     await membership.destroyWithCtx(ctx, { name: "remove_user" });
+
+    ctx.body = {
+      success: true,
+    };
+  }
+);
+
+router.post(
+  "channels.startCall",
+  auth(),
+  rateLimiter(RateLimiterStrategy.OneHundredPerMinute),
+  validate(T.ChannelsStartCallSchema),
+  transaction(),
+  async (ctx: APIContext<T.ChannelsStartCallReq>) => {
+    const { id } = ctx.input.body;
+    const { user } = ctx.state.auth;
+    const { transaction } = ctx.state;
+
+    // Locking the row serializes two members starting at the same moment -
+    // the second sees callId already set and takes the join path, so a
+    // channel can never split-brain into two rooms.
+    const channel = await Channel.scope("withMemberships").findByPk(id, {
+      transaction,
+      lock: { level: transaction.LOCK.UPDATE, of: Channel },
+      rejectOnEmpty: true,
+    });
+    authorize(user, "startCall", channel);
+
+    const call = await channel.startCall(ctx);
+
+    ctx.body = {
+      data: presentChannel(channel, { viewerId: user.id }),
+      call,
+      policies: presentPolicies(user, [channel]),
+    };
+  }
+);
+
+router.post(
+  "channels.endCall",
+  auth(),
+  rateLimiter(RateLimiterStrategy.OneHundredPerMinute),
+  validate(T.ChannelsEndCallSchema),
+  transaction(),
+  async (ctx: APIContext<T.ChannelsEndCallReq>) => {
+    const { id } = ctx.input.body;
+    const { user } = ctx.state.auth;
+    const { transaction } = ctx.state;
+
+    const channel = await Channel.scope("withMemberships").findByPk(id, {
+      transaction,
+      lock: { level: transaction.LOCK.UPDATE, of: Channel },
+      rejectOnEmpty: true,
+    });
+    authorize(user, "endCall", channel);
+
+    // Idempotent: ending an idle channel is a no-op, so a client that missed
+    // the call_ended event can call this freely.
+    await channel.endCall(ctx);
 
     ctx.body = {
       success: true,

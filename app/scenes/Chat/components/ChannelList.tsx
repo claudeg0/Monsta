@@ -1,4 +1,5 @@
 import { observer } from "mobx-react";
+import { CameraIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
@@ -10,12 +11,14 @@ import { Avatar } from "~/components/Avatar";
 import Button from "~/components/Button";
 import Flex from "~/components/Flex";
 import Text from "~/components/Text";
+import Tooltip from "~/components/Tooltip";
 import useCurrentUser from "~/hooks/useCurrentUser";
 import EventBoundary from "@shared/components/EventBoundary";
 import useStores from "~/hooks/useStores";
 import ChannelContextMenu from "~/menus/ChannelContextMenu";
 import ChannelMenu from "~/menus/ChannelMenu";
 import { chatPath } from "~/utils/routeHelpers";
+import { joinCall } from "../joinCall";
 import { openNewConversation } from "../openNewConversation";
 
 type Props = {
@@ -61,9 +64,16 @@ const ChannelListItem = observer(function ChannelListItem_({
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
-  const { chatPresence } = useStores();
+  const { callStore, channels, chatPresence } = useStores();
   const currentUser = useCurrentUser();
   const otherUser = useOtherParticipant(channel);
+
+  const handleJoinCall = (event: React.MouseEvent) => {
+    // Deliberately not stopping propagation - the row's own onSelect (open
+    // the conversation) is worth doing too, not instead.
+    event.preventDefault();
+    void joinCall({ channels, callStore }, channel.id);
+  };
 
   const isDirectMessage = channel.type === ChannelType.DirectMessage;
   const isLoadingOtherUser =
@@ -109,6 +119,16 @@ const ChannelListItem = observer(function ChannelListItem_({
             </Text>
           )}
         </Flex>
+        {channel.callInProgress && (
+          <Tooltip content={t("Join call")}>
+            <CallBadge
+              onClick={handleJoinCall}
+              aria-label={t("Join call")}
+            >
+              <CameraIcon size={16} />
+            </CallBadge>
+          </Tooltip>
+        )}
         {channel.isUnread && (
           <UnreadBadge aria-label={t("{{ count }} unread", {
             count: channel.unreadCount,
@@ -273,6 +293,27 @@ const UnreadBadge = styled.div`
   font-weight: 600;
   line-height: 18px;
   text-align: center;
+`;
+
+/**
+ * The same green as OnlineDot, not the accent colour - this signals "call
+ * live," the same kind of thing presence does, not an unread count (which
+ * does use accent, immediately to its right).
+ */
+const CallBadge = styled.button`
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #30a46c;
+  color: ${s("white")};
+  cursor: pointer;
 `;
 
 export default observer(ChannelList);

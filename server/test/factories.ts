@@ -44,6 +44,8 @@ import {
   SearchQuery,
   Pin,
   Comment,
+  Channel,
+  ChannelMembership,
   Import,
   OAuthAuthorizationCode,
   OAuthClient,
@@ -52,6 +54,7 @@ import {
   Template,
 } from "@server/models";
 import { RelationshipType } from "@server/models/Relationship";
+import { ChannelType } from "@server/models/Channel";
 import { SearchQuerySource } from "@server/models/SearchQuery";
 import AttachmentHelper from "@server/models/helpers/AttachmentHelper";
 import { hash } from "@server/utils/crypto";
@@ -527,6 +530,66 @@ export async function buildResolvedComment(
   comment.resolve(user);
   await comment.save();
   return comment;
+}
+
+/**
+ * Builds a channel with membership rows for each member, mirroring what
+ * channels.create writes. The returned channel has `memberships` loaded,
+ * which the channel policy requires.
+ *
+ * @param overrides channel column overrides; `memberIds` defaults to just
+ * the creator
+ * @returns the channel, with memberships attached
+ */
+export async function buildChannel(
+  overrides: Partial<Channel> & { memberIds?: string[] } = {}
+) {
+  const { memberIds, ...rest } = overrides;
+
+  if (!rest.teamId) {
+    const team = await buildTeam();
+    rest.teamId = team.id;
+  }
+
+  if (!rest.createdById) {
+    const user = await buildUser({ teamId: rest.teamId });
+    rest.createdById = user.id;
+  }
+
+  const channel = await Channel.create({
+    type: ChannelType.Group,
+    name: faker.lorem.words(3),
+    ...rest,
+  });
+
+  await ChannelMembership.bulkCreate(
+    (memberIds ?? [rest.createdById]).map((userId) => ({
+      channelId: channel.id,
+      userId,
+    }))
+  );
+  channel.memberships = await ChannelMembership.findAll({
+    where: { channelId: channel.id },
+  });
+
+  return channel;
+}
+
+/**
+ * Adds a member to an existing channel.
+ *
+ * @param channelId the channel to add the user to
+ * @param userId the user to add
+ * @returns the created membership
+ */
+export async function buildChannelMembership({
+  channelId,
+  userId,
+}: {
+  channelId: string;
+  userId: string;
+}) {
+  return ChannelMembership.create({ channelId, userId });
 }
 
 export async function buildFileOperation(

@@ -5,6 +5,7 @@ import { action } from "mobx";
 import { observer } from "mobx-react";
 import { createContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useHistory } from "react-router-dom";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { toast } from "sonner";
@@ -41,6 +42,8 @@ import type {
   WebsocketEntitiesEvent,
   WebsocketEntityDeletedEvent,
 } from "~/types";
+import { joinCall } from "~/scenes/Chat/joinCall";
+import { chatPath } from "~/utils/routeHelpers";
 import { AuthorizationError, NotFoundError } from "~/utils/errors";
 import Logger from "~/utils/Logger";
 import { getVisibilityListener, getPageVisible } from "~/utils/pageVisibility";
@@ -731,6 +734,76 @@ function useChatHandlers() {
   };
 }
 
+function useCallHandlers() {
+  const { auth, callStore, channels } = useStores();
+  const { t } = useTranslation();
+  const history = useHistory();
+
+  return (socket: SocketWithAuthentication) => {
+    socket.on(
+      "channels.call_started",
+      (event: {
+        channelId: string;
+        callId: string;
+        startedById: string;
+        startedAt: string;
+      }) => {
+        const channel = channels.get(event.channelId);
+        channel?.updateData({
+          callId: event.callId,
+          callStartedAt: event.startedAt,
+          callStartedById: event.startedById,
+        });
+
+        // No toast for your own call (you're already looking at it), or if
+        // this tab is already in it - a reconnect on an existing call would
+        // otherwise toast at the person already on the call.
+        if (
+          event.startedById === auth.user?.id ||
+          callStore.channelId === event.channelId
+        ) {
+          return;
+        }
+
+        const name = channel?.name ?? t("a conversation");
+        toast(t("Call started in {{ name }}", { name }), {
+          action: {
+            label: t("Join"),
+            onClick: () => {
+              history.push(chatPath(event.channelId));
+              void joinCall({ channels, callStore }, event.channelId);
+            },
+          },
+        });
+      }
+    );
+
+    socket.on("channels.call_ended", (event: { channelId: string }) => {
+      const channel = channels.get(event.channelId);
+      channel?.updateData({
+        callId: null,
+        callStartedAt: null,
+        callStartedById: null,
+      });
+
+      if (callStore.channelId === event.channelId) {
+        callStore.close();
+      }
+    });
+
+    // Reconciles call state (and everything else on Channel) after any gap
+    // in the socket connection - "authenticated" fires on the first connect
+    // too, but only actually refetches if chat has already been opened this
+    // session (there being loaded channels is a proxy for that), so a user
+    // who never touches chat doesn't pay for an unused fetch.
+    socket.on("authenticated", () => {
+      if (channels.orderedData.length > 0) {
+        void channels.fetchPage();
+      }
+    });
+  };
+}
+
 /**
  * Chat presence (who's online) is live socket state, not a DB row - there
  * is nothing to reconcile via a REST fetch on mount the way every other
@@ -986,6 +1059,7 @@ function WebsocketProvider({ children }: React.PropsWithChildren<object>) {
   const registerCollectionHandlers = useCollectionHandlers();
   const registerCommentHandlers = useCommentHandlers();
   const registerChatHandlers = useChatHandlers();
+  const registerCallHandlers = useCallHandlers();
   const registerPresenceHandlers = usePresenceHandlers();
   const registerGroupHandlers = useGroupHandlers();
   const registerTeamHandlers = useTeamHandlers();
@@ -1016,6 +1090,7 @@ function WebsocketProvider({ children }: React.PropsWithChildren<object>) {
       registerCollectionHandlers(currentSocket);
       registerCommentHandlers(currentSocket);
       registerChatHandlers(currentSocket);
+      registerCallHandlers(currentSocket);
       registerPresenceHandlers(currentSocket);
       registerGroupHandlers(currentSocket);
       registerTeamHandlers(currentSocket);

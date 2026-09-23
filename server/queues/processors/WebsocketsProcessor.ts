@@ -673,6 +673,29 @@ export default class WebsocketsProcessor {
         });
       }
 
+      case "channels.call_started": {
+        const channel = await Channel.findByPk(event.modelId);
+        if (!channel?.callId || !channel.callStartedAt) {
+          return;
+        }
+
+        // Raw column payload, not presentChannel - presenting requires the
+        // memberships association, and the client only patches the three
+        // call fields onto the channel it already holds.
+        return socketio.to(`channel-${channel.id}`).emit(event.name, {
+          channelId: channel.id,
+          callId: channel.callId,
+          startedById: channel.callStartedById,
+          startedAt: channel.callStartedAt,
+        });
+      }
+
+      case "channels.call_ended": {
+        return socketio.to(`channel-${event.modelId}`).emit(event.name, {
+          channelId: event.modelId,
+        });
+      }
+
       case "messages.create":
       case "messages.update": {
         // Same gap as server/routes/api/messages/messages.ts's list/update

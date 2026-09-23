@@ -57,6 +57,23 @@ class Channel extends Model {
   currentUserLastReadAt: string | null;
 
   /**
+   * The active call's id, or null when no call is in progress. Shared state
+   * synced from the server - whether *this* browser tab has joined it is
+   * tracked separately, in CallStore.
+   */
+  @Field
+  @observable
+  callId: string | null;
+
+  @Field
+  @observable
+  callStartedAt: string | null;
+
+  @Field
+  @observable
+  callStartedById: string | null;
+
+  /**
    * How many messages here the current user hasn't read. Per-viewer, like
    * `currentUserLastReadAt`. Excludes the user's own messages, so sending
    * one never makes a channel look unread to its author.
@@ -74,6 +91,14 @@ class Channel extends Model {
    */
   get isUnread() {
     return this.unreadCount > 0;
+  }
+
+  /**
+   * Whether this channel currently has an active call. Says nothing about
+   * whether the current viewer has joined it - see CallStore for that.
+   */
+  get callInProgress() {
+    return !!this.callId;
   }
 }
 

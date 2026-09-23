@@ -1,4 +1,5 @@
 import { observer } from "mobx-react";
+import { CameraIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import { dateToRelative } from "@shared/utils/date";
 import { errToString } from "@shared/utils/error";
 import type Message from "~/models/Message";
 import { Avatar } from "~/components/Avatar";
+import Button from "~/components/Button";
 import Flex from "~/components/Flex";
 import Text from "~/components/Text";
 import useStores from "~/hooks/useStores";
@@ -17,6 +19,7 @@ import MessageMenu from "~/menus/MessageMenu";
 import { PAGINATION_SYMBOL } from "~/stores/base/Store";
 import Composer from "./Composer";
 import MessageEditor from "./MessageEditor";
+import { joinCall } from "../joinCall";
 
 type Props = {
   channelId: string;
@@ -129,11 +132,19 @@ const MessageItem = observer(function MessageItem_({
 
 function Thread({ channelId }: Props) {
   const { t } = useTranslation();
-  const { messages } = useStores();
+  const { callStore, channels, messages } = useStores();
   const [isLoadingMore, setLoadingMore] = React.useState(false);
   const [hasMore, setHasMore] = React.useState(true);
 
   const channelMessages = messages.inChannel(channelId);
+  const channel = channels.get(channelId);
+  const showCallBanner =
+    channel?.callInProgress &&
+    !(callStore.isOpen && callStore.channelId === channelId);
+
+  const handleJoinCall = () => {
+    void joinCall({ channels, callStore }, channelId);
+  };
 
   // Deliberately keyed on channelId alone - the initial page load for a
   // freshly-opened channel, not a re-fetch on every new message (those
@@ -168,6 +179,17 @@ function Thread({ channelId }: Props) {
 
   return (
     <Container column>
+      {showCallBanner && (
+        <CallBanner align="center" justify="space-between" gap={12}>
+          <Flex align="center" gap={8}>
+            <CameraIcon />
+            <Text size="small" weight="bold">
+              {t("Call in progress")}
+            </Text>
+          </Flex>
+          <Button onClick={handleJoinCall}>{t("Join")}</Button>
+        </CallBanner>
+      )}
       <MessageList>
         <MessageListInner>
           {hasMore && (
@@ -188,6 +210,13 @@ function Thread({ channelId }: Props) {
 const Container = styled(Flex)`
   height: 100%;
   min-height: 0;
+`;
+
+const CallBanner = styled(Flex)`
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: ${s("sidebarActiveBackground")};
+  border-bottom: 1px solid ${s("inputBorder")};
 `;
 
 const MessageList = styled.div`

@@ -32,6 +32,9 @@ export default function present(
     memberIds: channel.memberships?.map((m) => m.userId) ?? [],
     lastMessageAt: channel.lastMessageAt,
     archivedAt: channel.archivedAt,
+    callId: channel.callId,
+    callStartedAt: channel.callStartedAt,
+    callStartedById: channel.callStartedById,
     createdAt: channel.createdAt,
     updatedAt: channel.updatedAt,
     // The viewer's own read cursor - unread state is `lastMessageAt >

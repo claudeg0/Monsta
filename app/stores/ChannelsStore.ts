@@ -3,6 +3,7 @@ import { orderBy } from "es-toolkit/compat";
 import { action, override } from "mobx";
 import Channel from "~/models/Channel";
 import { client } from "~/utils/ApiClient";
+import type { CallSession } from "./CallStore";
 import type RootStore from "./RootStore";
 import Store from "./base/Store";
 
@@ -66,6 +67,34 @@ export default class ChannelsStore extends Store<Channel> {
   leave = async (id: string): Promise<void> => {
     await client.post("/channels.leave", { id });
     this.remove(id);
+  };
+
+  /**
+   * Starts a call in a channel, or joins the one already running there.
+   *
+   * @param id ID of the channel to start or join a call in
+   * @returns the call session (room url and meeting token) for the caller
+   */
+  @action
+  startCall = async (
+    id: string
+  ): Promise<{ channel: Channel; call: CallSession }> => {
+    const res = await client.post("/channels.startCall", { id });
+    invariant(res?.data && res.call, "Channel and call not available");
+    this.addPolicies(res.policies);
+    this.add(res.data);
+    return { channel: this.data.get(res.data.id) as Channel, call: res.call };
+  };
+
+  /**
+   * Ends the active call in a channel, if any. Idempotent - safe to call on
+   * a channel with no active call.
+   *
+   * @param id ID of the channel to end the call in
+   */
+  @action
+  endCall = async (id: string): Promise<void> => {
+    await client.post("/channels.endCall", { id });
   };
 
   /**

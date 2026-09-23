@@ -428,6 +428,15 @@ export type ChannelEvent =
       userId: string;
       teamId: string;
       actorId: string;
+    })
+  // Call lifecycle. These are broadcast to the whole channel room as raw
+  // column payloads by WebsocketsProcessor - deliberately NOT presented
+  // channels (see the processor for why).
+  | (BaseEvent<Channel> & {
+      name: "channels.call_started" | "channels.call_ended";
+      modelId: string;
+      teamId: string;
+      actorId: string;
     });
 
 export type MessageEvent = BaseEvent<Message> & {

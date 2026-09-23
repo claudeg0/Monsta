@@ -1,5 +1,5 @@
 import { observer } from "mobx-react";
-import { BackIcon, PlusIcon } from "outline-icons";
+import { BackIcon, CameraIcon, PlusIcon } from "outline-icons";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory, useRouteMatch } from "react-router-dom";
@@ -13,13 +13,16 @@ import NudeButton from "~/components/NudeButton";
 import PageTitle from "~/components/PageTitle";
 import Text from "~/components/Text";
 import Tooltip from "~/components/Tooltip";
+import env from "~/env";
 import useCurrentUser from "~/hooks/useCurrentUser";
 import useMobile from "~/hooks/useMobile";
 import { useVisibleViewportVars } from "~/hooks/useVisualViewport";
 import useStores from "~/hooks/useStores";
 import { chatPath } from "~/utils/routeHelpers";
+import CallOverlay from "./components/CallOverlay";
 import ChannelList from "./components/ChannelList";
 import Thread from "./components/Thread";
+import { joinCall } from "./joinCall";
 import { openNewConversation } from "./openNewConversation";
 
 // Why this doesn't just render <Scene>: Scene's own root (FillWidth) stacks
@@ -51,11 +54,12 @@ import { openNewConversation } from "./openNewConversation";
 // environments without dvh support.
 function Chat() {
   const { t } = useTranslation();
-  const { channels, dialogs, users } = useStores();
+  const { callStore, channels, dialogs, users } = useStores();
   const currentUser = useCurrentUser();
   const history = useHistory();
   const match = useRouteMatch<{ channelId?: string }>();
   const channelId = match.params.channelId;
+  const currentChannel = channelId ? channels.get(channelId) : undefined;
   const isMobile = useMobile();
   const [isLoadingUsers, setIsLoadingUsers] = React.useState(true);
 
@@ -124,6 +128,12 @@ function Chat() {
     history.push(chatPath(channel.id));
   };
 
+  const handleStartOrJoinCall = () => {
+    if (channelId) {
+      void joinCall({ channels, callStore }, channelId);
+    }
+  };
+
   const handleNewConversation = () => {
     openNewConversation(dialogs, history, t);
   };
@@ -157,11 +167,39 @@ function Chat() {
           ) : undefined
         }
         actions={
-          <Tooltip content={t("New message")}>
-            <NudeButton onClick={handleNewConversation}>
-              <PlusIcon />
-            </NudeButton>
-          </Tooltip>
+          <Flex align="center" gap={4}>
+            {/* Gated on DAILY_DOMAIN, the same flag CallOverlay itself is
+             * gated on - the button has nothing to open when the feature
+             * isn't configured. Icon/label don't flip on whether *this* tab
+             * has joined (that's callStore, not the channel) - only on
+             * whether a call is running at all, since starting and joining
+             * are the same click either way. */}
+            {channelId && env.DAILY_DOMAIN && (
+              <Tooltip
+                content={
+                  currentChannel?.callInProgress
+                    ? t("Join call")
+                    : t("Start call")
+                }
+              >
+                <NudeButton
+                  onClick={handleStartOrJoinCall}
+                  aria-label={
+                    currentChannel?.callInProgress
+                      ? t("Join call")
+                      : t("Start call")
+                  }
+                >
+                  <CameraIcon />
+                </NudeButton>
+              </Tooltip>
+            )}
+            <Tooltip content={t("New message")}>
+              <NudeButton onClick={handleNewConversation}>
+                <PlusIcon />
+              </NudeButton>
+            </Tooltip>
+          </Flex>
         }
       />
       <Body>
@@ -199,6 +237,7 @@ function Chat() {
           </Main>
         )}
       </Body>
+      <CallOverlay />
     </Viewport>
   );
 }
