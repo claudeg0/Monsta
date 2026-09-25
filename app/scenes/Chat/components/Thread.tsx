@@ -129,7 +129,7 @@ const MessageItem = observer(function MessageItem_({
 
 function Thread({ channelId }: Props) {
   const { t } = useTranslation();
-  const { messages } = useStores();
+  const { channels, messages } = useStores();
   const [isLoadingMore, setLoadingMore] = React.useState(false);
   const [hasMore, setHasMore] = React.useState(true);
 
@@ -149,6 +149,21 @@ function Thread({ channelId }: Props) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]);
+
+  // Keep the read cursor current while viewing. New messages arrive live
+  // via the messages.create websocket handler, so keying on the newest
+  // message id is the "user is caught up" signal - and it is the entire
+  // feed for chat-notification suppression: the notification task skips any
+  // recipient whose membership.lastReadAt covers the message (see
+  // docs/chat-notifications-plan.md). Own messages included - having just
+  // sent one, the sender has read it.
+  const newestMessageId = channelMessages[0]?.id;
+  React.useEffect(() => {
+    if (newestMessageId) {
+      void channels.markRead(channelId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelId, newestMessageId]);
 
   const handleLoadOlder = async () => {
     setLoadingMore(true);
