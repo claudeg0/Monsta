@@ -3,6 +3,7 @@ import { action, computed, observable } from "mobx";
 import type { NotificationData } from "@shared/types";
 import { NotificationEventType } from "@shared/types";
 import {
+  chatPath,
   collectionPath,
   commentPath,
   documentPath,
@@ -124,6 +125,14 @@ class Notification extends Model {
   commentId?: string;
 
   /**
+   * The chat channel ID on aggregated chat message notifications. Null for
+   * every other notification type.
+   */
+  @Field
+  @observable
+  channelId?: string | null = null;
+
+  /**
    * The comment that the notification is associated with.
    */
   @Relation(() => Comment, { onDelete: "cascade" })
@@ -209,6 +218,10 @@ class Notification extends Model {
         return t("reacted {{ emoji }} to your comment on", {
           emoji: this.data.emoji,
         });
+      case NotificationEventType.CreateChatMessages:
+        return t("sent {{ count }} messages in", {
+          count: this.data.messageCount ?? 1,
+        });
       case NotificationEventType.AddUserToDocument:
         return t("shared");
       case NotificationEventType.AddUserToCollection:
@@ -238,6 +251,27 @@ class Notification extends Model {
     }
     if (this.collectionId) {
       return this.collection?.name ?? "a collection";
+    }
+    if (this.channelId) {
+      // DMs have no server-side name - the chat UI derives one from the
+      // other participant. Reuse the loaded channel when we have it, and
+      // fall back gracefully when chat state isn't loaded in this tab.
+      const channel = this.store.rootStore.channels.get(this.channelId);
+      if (channel) {
+        if (channel.name) {
+          return channel.name;
+        }
+        const otherId = channel.memberIds?.find(
+          (id) => id !== this.store.rootStore.auth.user?.id
+        );
+        const other = otherId
+          ? this.store.rootStore.users.get(otherId)
+          : undefined;
+        if (other) {
+          return other.name;
+        }
+      }
+      return "a conversation";
     }
     return "Unknown";
   }
@@ -287,6 +321,9 @@ class Notification extends Model {
       }
       case NotificationEventType.ExportCompleted: {
         return settingsPath("export");
+      }
+      case NotificationEventType.CreateChatMessages: {
+        return this.channelId ? chatPath(this.channelId) : "";
       }
       default:
         this.event satisfies never;

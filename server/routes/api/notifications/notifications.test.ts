@@ -4,6 +4,7 @@ import { randomElement } from "@shared/random";
 import { NotificationEventType } from "@shared/types";
 import NotificationSettingsHelper from "@server/models/helpers/NotificationSettingsHelper";
 import {
+  buildChannel,
   buildCollection,
   buildDocument,
   buildNotification,
@@ -16,6 +17,9 @@ type NotificationItem = {
   actor: { id: string };
   userId: string;
   event: NotificationEventType;
+  channelId?: string | null;
+  documentId?: string | null;
+  commentId?: string | null;
 };
 
 const server = getTestServer();
@@ -83,6 +87,61 @@ describe("#notifications.list", () => {
     expect(events).toContain(NotificationEventType.UpdateDocument);
     expect(events).toContain(NotificationEventType.CreateComment);
     expect(events).toContain(NotificationEventType.MentionedInComment);
+  });
+
+  it("should return a channel-only chat notification alongside document ones", async () => {
+    // Chat notifications have documentId/commentId null and channelId set;
+    // the list must render them without eager-load errors or assumptions
+    // that every row has a document (plan risk 1).
+    const actor = await buildUser();
+    const user = await buildUser({
+      teamId: actor.teamId,
+    });
+    const collection = await buildCollection({
+      teamId: actor.teamId,
+      createdById: actor.id,
+    });
+    const document = await buildDocument({
+      teamId: actor.teamId,
+      createdById: actor.id,
+      collectionId: collection.id,
+    });
+    const channel = await buildChannel({
+      teamId: actor.teamId,
+      createdById: actor.id,
+      memberIds: [actor.id, user.id],
+    });
+    await Promise.all([
+      buildNotification({
+        actorId: actor.id,
+        documentId: document.id,
+        collectionId: collection.id,
+        event: NotificationEventType.MentionedInComment,
+        teamId: user.teamId,
+        userId: user.id,
+      }),
+      buildNotification({
+        actorId: actor.id,
+        event: NotificationEventType.CreateChatMessages,
+        teamId: user.teamId,
+        userId: user.id,
+        channelId: channel.id,
+        data: { messageCount: 3, snippet: "hello there" },
+      }),
+    ]);
+
+    const res = await server.post("/api/notifications.list", user);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data.notifications.length).toBe(2);
+    const chat = body.data.notifications.find(
+      (n: NotificationItem) =>
+        n.event === NotificationEventType.CreateChatMessages
+    );
+    expect(chat.channelId).toBe(channel.id);
+    expect(chat.documentId).toBeNull();
+    expect(chat.commentId).toBeNull();
   });
 
   it("should return notifications filtered by event type", async () => {

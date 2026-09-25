@@ -87,6 +87,12 @@ function NotificationListItem({ notification, onNavigate }: Props) {
                 defaultValue={toJS(notification.comment.data)}
               />
             )}
+            {notification.event === NotificationEventType.CreateChatMessages &&
+              notification.data?.snippet && (
+                <StyledSnippet type="tertiary" size="xsmall">
+                  {notification.data.snippet}
+                </StyledSnippet>
+              )}
             {isAccessRequestPending && (
               <AccessRequestActions notification={notification} />
             )}
@@ -110,6 +116,10 @@ const StyledCommentEditor = styled(CommentEditor)`
   pointer-events: none;
 
   ${truncateMultiline(3)}
+`;
+
+const StyledSnippet = styled(Text)`
+  ${truncateMultiline(2)}
 `;
 
 const StyledAvatar = styled(Avatar).attrs({
