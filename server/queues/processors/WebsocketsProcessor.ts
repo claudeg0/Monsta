@@ -1,6 +1,7 @@
 import { compact, concat, uniq, uniqBy } from "es-toolkit/compat";
 import type { Server } from "socket.io";
 import {
+  Channel,
   Comment,
   Document,
   Collection,
@@ -8,6 +9,7 @@ import {
   Group,
   GroupMembership,
   GroupUser,
+  Message,
   Pin,
   Star,
   Team,
@@ -20,11 +22,13 @@ import {
 } from "@server/models";
 import { cannot } from "@server/policies";
 import {
+  presentChannel,
   presentComment,
   presentCollection,
   presentDocument,
   presentFileOperation,
   presentGroup,
+  presentMessage,
   presentPin,
   presentStar,
   presentSubscription,
@@ -612,6 +616,115 @@ export default class WebsocketsProcessor {
           .emit(event.name, {
             modelId: event.modelId,
           });
+      }
+
+      case "channels.create": {
+        const channel = await Channel.scope("withMemberships").findByPk(
+          event.modelId
+        );
+        if (!channel) {
+          return;
+        }
+
+        // Members other than the creator aren't in `channel-${id}` yet -
+        // move their already-connected sockets in live (same pattern as
+        // `collections.add_user` above), then notify each member's own
+        // room directly so the notification lands even if the join above
+        // and this emit race.
+        const memberIds = channel.memberships.map((m) => m.userId);
+        for (const userId of memberIds) {
+          socketio.in(`user-${userId}`).socketsJoin(`channel-${channel.id}`);
+        }
+        return socketio
+          .to(memberIds.map((id) => `user-${id}`))
+          .emit(event.name, presentChannel(channel));
+      }
+
+      case "channels.add_user": {
+        const channel = await Channel.scope("withMemberships").findByPk(
+          event.modelId
+        );
+        if (!channel) {
+          return;
+        }
+
+        // Without this the new member's existing sockets stay outside the
+        // channel room and they receive no messages at all until they next
+        // reload - the conversation would look frozen rather than new.
+        socketio
+          .in(`user-${event.userId}`)
+          .socketsJoin(`channel-${channel.id}`);
+
+        // Only the new member is notified. Emitting the presented channel to
+        // everyone would also hand them unreadCount: 0 and silently clear
+        // unread badges for people who had them.
+        return socketio
+          .to(`user-${event.userId}`)
+          .emit("channels.create", presentChannel(channel));
+      }
+
+      case "channels.remove_user": {
+        socketio
+          .in(`user-${event.userId}`)
+          .socketsLeave(`channel-${event.modelId}`);
+
+        return socketio.to(`user-${event.userId}`).emit("channels.delete", {
+          modelId: event.modelId,
+        });
+      }
+
+      case "channels.call_started": {
+        const channel = await Channel.findByPk(event.modelId);
+        if (!channel?.callId || !channel.callStartedAt) {
+          return;
+        }
+
+        // Raw column payload, not presentChannel - presenting requires the
+        // memberships association, and the client only patches the three
+        // call fields onto the channel it already holds.
+        return socketio.to(`channel-${channel.id}`).emit(event.name, {
+          channelId: channel.id,
+          callId: channel.callId,
+          startedById: channel.callStartedById,
+          startedAt: channel.callStartedAt,
+        });
+      }
+
+      case "channels.call_ended": {
+        return socketio.to(`channel-${event.modelId}`).emit(event.name, {
+          channelId: event.modelId,
+        });
+      }
+
+      case "messages.create":
+      case "messages.update": {
+        // Same gap as server/routes/api/messages/messages.ts's list/update
+        // routes had - presentMessage() needs createdBy loaded, or it
+        // throws. This broadcast path re-fetches independently of the
+        // HTTP response (which does have it, via a manual assignment in
+        // the create route), so it needs its own include.
+        const message = await Message.findByPk(event.modelId, {
+          include: [{ association: "createdBy" }],
+        });
+        if (!message) {
+          return;
+        }
+        return socketio
+          .to(`channel-${message.channelId}`)
+          .emit(event.name, presentMessage(message));
+      }
+
+      case "messages.delete": {
+        const message = await Message.findByPk(event.modelId, {
+          paranoid: false,
+        });
+        if (!message) {
+          return;
+        }
+        return socketio.to(`channel-${message.channelId}`).emit(event.name, {
+          modelId: event.modelId,
+          channelId: message.channelId,
+        });
       }
 
       case "comments.create":

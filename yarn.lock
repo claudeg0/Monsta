@@ -1641,6 +1641,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@daily-co/daily-js@npm:^0.92.2":
+  version: 0.92.2
+  resolution: "@daily-co/daily-js@npm:0.92.2"
+  dependencies:
+    "@babel/runtime": "npm:^7.12.5"
+    "@sentry/browser": "npm:^8.33.1"
+    bowser: "npm:^2.8.1"
+    dequal: "npm:^2.0.3"
+    events: "npm:^3.1.0"
+  checksum: 10c0/fc36f5167b49ffd7b40069628f96cdf5b4f2968bcdf164d71db73010f7a549e991495ee0bfafcd4bc07c053a91a08f510ef6c586dcab66016af1c75c160a7d5e
+  languageName: node
+  linkType: hard
+
 "@datadog/libdatadog@npm:0.12.1":
   version: 0.12.1
   resolution: "@datadog/libdatadog@npm:0.12.1"
@@ -5694,6 +5707,44 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@sentry-internal/browser-utils@npm:8.55.2":
+  version: 8.55.2
+  resolution: "@sentry-internal/browser-utils@npm:8.55.2"
+  dependencies:
+    "@sentry/core": "npm:8.55.2"
+  checksum: 10c0/51db1a4c12c59b449ff77d6f4356de0a3a2484047a6dce87485a545ef1061795552b23ca512e1cc091298a95e2a55d4d97f8880e60c33102bc7af58cc24d8372
+  languageName: node
+  linkType: hard
+
+"@sentry-internal/feedback@npm:8.55.2":
+  version: 8.55.2
+  resolution: "@sentry-internal/feedback@npm:8.55.2"
+  dependencies:
+    "@sentry/core": "npm:8.55.2"
+  checksum: 10c0/bb016e7c7e20cd96e4524f05c2f88ea03498345cb7b733a81ea1d13f09be833d4ceffc7b2b70d7042ee8ee9ef5ddf4de2da02d4b2c7592f46e6a2afa7a5ee359
+  languageName: node
+  linkType: hard
+
+"@sentry-internal/replay-canvas@npm:8.55.2":
+  version: 8.55.2
+  resolution: "@sentry-internal/replay-canvas@npm:8.55.2"
+  dependencies:
+    "@sentry-internal/replay": "npm:8.55.2"
+    "@sentry/core": "npm:8.55.2"
+  checksum: 10c0/63ac48f8e2a8ce932ea65cd12823a73202e793179c8a910eebb5d9cf92cd5d4bf73da09996515b49736163fbeb91ca9519eb2e507cb4ca2d377b45984d31d33c
+  languageName: node
+  linkType: hard
+
+"@sentry-internal/replay@npm:8.55.2":
+  version: 8.55.2
+  resolution: "@sentry-internal/replay@npm:8.55.2"
+  dependencies:
+    "@sentry-internal/browser-utils": "npm:8.55.2"
+    "@sentry/core": "npm:8.55.2"
+  checksum: 10c0/699b36d559f91cf7fbbc9c2bb7e0c7ea9f87fa74390595e6bb5548abbaef8cf10a6d3e69601841fb1e1eab3e08c759dd36fa0398edd69364fa343259e654f106
+  languageName: node
+  linkType: hard
+
 "@sentry/browser-utils@npm:10.73.0":
   version: 10.73.0
   resolution: "@sentry/browser-utils@npm:10.73.0"
@@ -5718,6 +5769,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@sentry/browser@npm:^8.33.1":
+  version: 8.55.2
+  resolution: "@sentry/browser@npm:8.55.2"
+  dependencies:
+    "@sentry-internal/browser-utils": "npm:8.55.2"
+    "@sentry-internal/feedback": "npm:8.55.2"
+    "@sentry-internal/replay": "npm:8.55.2"
+    "@sentry-internal/replay-canvas": "npm:8.55.2"
+    "@sentry/core": "npm:8.55.2"
+  checksum: 10c0/133eaa7b6756f02deb1aab0a8579a8d804ebb90d008c5dbadd03bb4f0f2ca59bbeaaa8bdf689eccc13f1c96f097933df7110e2ff41bec22694a3d0bb8b6fab59
+  languageName: node
+  linkType: hard
+
 "@sentry/conventions@npm:^0.16.0":
   version: 0.16.0
   resolution: "@sentry/conventions@npm:0.16.0"
@@ -5731,6 +5795,13 @@ __metadata:
   dependencies:
     "@sentry/conventions": "npm:^0.16.0"
   checksum: 10c0/553469fd82ec11f5697ab4b2881b6f811834a1036e88afe24920940f131d59ad1dfcd008b99656661c49c7c9de51678719b884b0a6cfcb696312fd58bb911495
+  languageName: node
+  linkType: hard
+
+"@sentry/core@npm:8.55.2":
+  version: 8.55.2
+  resolution: "@sentry/core@npm:8.55.2"
+  checksum: 10c0/5e61ddd11fbc4e757da66ceb2d67a0d53e46bcab936754ef9a832bc814ba9e45ada790c125a76ecde8c3e1c87fa830ada2c368a6af9e09dbd34e2b3e02d5ce10
   languageName: node
   linkType: hard
 
@@ -8449,6 +8520,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bowser@npm:^2.8.1":
+  version: 2.14.1
+  resolution: "bowser@npm:2.14.1"
+  checksum: 10c0/bb69b55ba7f0456e3dc07d0cfd9467f985581f640ba8fd426b08754a6737ee0d6cf3b50607941e5255f04c83075b952ece0599f978dd4d20f1e95461104c5ffd
+  languageName: node
+  linkType: hard
+
 "brace-expansion@npm:^1.1.7":
   version: 1.1.18
   resolution: "brace-expansion@npm:1.1.18"
@@ -10233,6 +10311,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dequal@npm:^2.0.3":
+  version: 2.0.3
+  resolution: "dequal@npm:2.0.3"
+  checksum: 10c0/f98860cdf58b64991ae10205137c0e97d384c3a4edc7f807603887b7c4b850af1224a33d88012009f150861cbee4fa2d322c4cc04b9313bee312e47f6ecaa888
+  languageName: node
+  linkType: hard
+
 "destroy@npm:^1.2.0":
   version: 1.2.0
   resolution: "destroy@npm:1.2.0"
@@ -11014,7 +11099,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"events@npm:3.3.0":
+"events@npm:3.3.0, events@npm:^3.1.0":
   version: 3.3.0
   resolution: "events@npm:3.3.0"
   checksum: 10c0/d6b6f2adbccbcda74ddbab52ed07db727ef52e31a61ed26db9feb7dc62af7fc8e060defa65e5f8af9449b86b52cc1a1f6a79f2eafcf4e62add2b7a1fa4a432f6
@@ -15514,6 +15599,7 @@ __metadata:
     "@bull-board/koa": "npm:^6.21.3"
     "@bull-board/ui": "npm:^6.21.3"
     "@css-inline/css-inline-wasm": "npm:^0.20.2"
+    "@daily-co/daily-js": "npm:^0.92.2"
     "@dnd-kit/core": "npm:^6.3.1"
     "@dnd-kit/modifiers": "npm:^6.0.1"
     "@dnd-kit/sortable": "npm:^7.0.2"

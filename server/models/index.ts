@@ -4,6 +4,10 @@ export { default as Attachment } from "./Attachment";
 
 export { default as AuthenticationProvider } from "./AuthenticationProvider";
 
+export { default as Channel } from "./Channel";
+
+export { default as ChannelMembership } from "./ChannelMembership";
+
 export { default as Relationship } from "./Relationship";
 
 export { default as Collection } from "./Collection";
@@ -35,6 +39,8 @@ export { default as ImportTask } from "./ImportTask";
 export { default as Integration } from "./Integration";
 
 export { default as IntegrationAuthentication } from "./IntegrationAuthentication";
+
+export { default as Message } from "./Message";
 
 export { default as Notification } from "./Notification";
 

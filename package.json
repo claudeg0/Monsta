@@ -63,6 +63,7 @@
     "@bull-board/koa": "^6.21.3",
     "@bull-board/ui": "^6.21.3",
     "@css-inline/css-inline-wasm": "^0.20.2",
+    "@daily-co/daily-js": "^0.92.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^6.0.1",
     "@dnd-kit/sortable": "^7.0.2",

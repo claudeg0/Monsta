@@ -312,7 +312,15 @@ export default class DeliverWebhookTask extends BaseTask<Props> {
       case "passkeys.create":
       case "passkeys.update":
       case "passkeys.delete":
-        // Ignored
+      case "channels.create":
+      case "channels.add_user":
+      case "channels.remove_user":
+      case "channels.call_started":
+      case "channels.call_ended":
+      case "messages.create":
+      case "messages.update":
+      case "messages.delete":
+        // Ignored - chat is not part of the webhook subscription surface.
         return;
       default:
         assertUnreachable(event);

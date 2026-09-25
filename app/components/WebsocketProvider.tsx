@@ -5,6 +5,7 @@ import { action } from "mobx";
 import { observer } from "mobx-react";
 import { createContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useHistory } from "react-router-dom";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ import {
 } from "@shared/types";
 import { errToId, toError } from "@shared/utils/error";
 import type RootStore from "~/stores/RootStore";
+import type Channel from "~/models/Channel";
 import type Collection from "~/models/Collection";
 import type Comment from "~/models/Comment";
 import type Document from "~/models/Document";
@@ -24,6 +26,7 @@ import type GroupMembership from "~/models/GroupMembership";
 import type GroupUser from "~/models/GroupUser";
 import type Import from "~/models/Import";
 import type Membership from "~/models/Membership";
+import type Message from "~/models/Message";
 import type Notification from "~/models/Notification";
 import type Pin from "~/models/Pin";
 import type Star from "~/models/Star";
@@ -39,6 +42,8 @@ import type {
   WebsocketEntitiesEvent,
   WebsocketEntityDeletedEvent,
 } from "~/types";
+import { joinCall } from "~/scenes/Chat/joinCall";
+import { chatPath } from "~/utils/routeHelpers";
 import { AuthorizationError, NotFoundError } from "~/utils/errors";
 import Logger from "~/utils/Logger";
 import { getVisibilityListener, getPageVisible } from "~/utils/pageVisibility";
@@ -677,6 +682,158 @@ function useCommentHandlers() {
   };
 }
 
+function useChatHandlers() {
+  const { auth, channels, messages } = useStores();
+
+  return (socket: SocketWithAuthentication) => {
+    socket.on("channels.create", (event: PartialExcept<Channel, "id">) => {
+      channels.add(event);
+    });
+
+    // Sent only to someone who has left (or been removed from) a group, so
+    // their own list drops it without a reload. Everyone else keeps theirs.
+    socket.on("channels.delete", (event: WebsocketEntityDeletedEvent) => {
+      channels.remove(event.modelId);
+    });
+
+    socket.on("messages.create", (event: PartialExcept<Message, "id">) => {
+      messages.add(event);
+      const channel = event.channelId ? channels.get(event.channelId) : undefined;
+
+      // A conversation the viewer hid is removed from this store, but their
+      // socket stays in its room - so this is how a hidden conversation comes
+      // back the moment there's something new in it, rather than only on the
+      // next full fetch. Fetching also lands the server's own unread count
+      // instead of guessing at one. Store.fetch de-dupes concurrent calls, so
+      // a burst of messages triggers a single request.
+      if (!channel && event.channelId) {
+        void channels.fetch(event.channelId);
+        return;
+      }
+
+      if (channel && event.createdAt) {
+        channel.updateData({ lastMessageAt: event.createdAt });
+      }
+
+      // The sender receives this event for their own message too (they're in
+      // the channel room), so without this check sending would bump your own
+      // unread badge. Mirrors the server's own exclusion in
+      // routes/api/channels/channels.ts.
+      if (channel && event.createdById !== auth.user?.id) {
+        channel.updateData({ unreadCount: channel.unreadCount + 1 });
+      }
+    });
+
+    socket.on("messages.update", (event: PartialExcept<Message, "id">) => {
+      messages.add(event);
+    });
+
+    socket.on("messages.delete", (event: WebsocketEntityDeletedEvent) => {
+      messages.remove(event.modelId);
+    });
+  };
+}
+
+function useCallHandlers() {
+  const { auth, callStore, channels } = useStores();
+  const { t } = useTranslation();
+  const history = useHistory();
+
+  return (socket: SocketWithAuthentication) => {
+    socket.on(
+      "channels.call_started",
+      (event: {
+        channelId: string;
+        callId: string;
+        startedById: string;
+        startedAt: string;
+      }) => {
+        const channel = channels.get(event.channelId);
+        channel?.updateData({
+          callId: event.callId,
+          callStartedAt: event.startedAt,
+          callStartedById: event.startedById,
+        });
+
+        // No toast for your own call (you're already looking at it), or if
+        // this tab is already in it - a reconnect on an existing call would
+        // otherwise toast at the person already on the call.
+        if (
+          event.startedById === auth.user?.id ||
+          callStore.channelId === event.channelId
+        ) {
+          return;
+        }
+
+        const name = channel?.name ?? t("a conversation");
+        toast(t("Call started in {{ name }}", { name }), {
+          action: {
+            label: t("Join"),
+            onClick: () => {
+              history.push(chatPath(event.channelId));
+              void joinCall({ channels, callStore }, event.channelId);
+            },
+          },
+        });
+      }
+    );
+
+    socket.on("channels.call_ended", (event: { channelId: string }) => {
+      const channel = channels.get(event.channelId);
+      channel?.updateData({
+        callId: null,
+        callStartedAt: null,
+        callStartedById: null,
+      });
+
+      if (callStore.channelId === event.channelId) {
+        callStore.close();
+      }
+    });
+
+    // Reconciles call state (and everything else on Channel) after any gap
+    // in the socket connection - "authenticated" fires on the first connect
+    // too, but only actually refetches if chat has already been opened this
+    // session (there being loaded channels is a proxy for that), so a user
+    // who never touches chat doesn't pay for an unused fetch.
+    socket.on("authenticated", () => {
+      if (channels.orderedData.length > 0) {
+        void channels.fetchPage();
+      }
+    });
+  };
+}
+
+/**
+ * Chat presence (who's online) is live socket state, not a DB row - there
+ * is nothing to reconcile via a REST fetch on mount the way every other
+ * realtime feature here does. `presence.snapshot` (sent once, right after
+ * this socket authenticates) and the ongoing `presence.online`/`.offline`
+ * deltas are reconciled by ChatPresenceStore itself, not here - this hook
+ * only resets that store at the start of every new connection (including
+ * reconnects, since a disconnect makes all previously-known state stale)
+ * and forwards the three events to it.
+ */
+function usePresenceHandlers() {
+  const { chatPresence } = useStores();
+
+  return (socket: SocketWithAuthentication) => {
+    chatPresence.reset();
+
+    socket.on("presence.snapshot", (event: { userIds: string[] }) => {
+      chatPresence.applySnapshot(event.userIds);
+    });
+
+    socket.on("presence.online", (event: { userId: string }) => {
+      chatPresence.markOnline(event.userId);
+    });
+
+    socket.on("presence.offline", (event: { userId: string }) => {
+      chatPresence.markOffline(event.userId);
+    });
+  };
+}
+
 function useGroupHandlers() {
   const { groups, groupUsers } = useStores();
 
@@ -901,6 +1058,9 @@ function WebsocketProvider({ children }: React.PropsWithChildren<object>) {
   const registerDocumentHandlers = useDocumentHandlers();
   const registerCollectionHandlers = useCollectionHandlers();
   const registerCommentHandlers = useCommentHandlers();
+  const registerChatHandlers = useChatHandlers();
+  const registerCallHandlers = useCallHandlers();
+  const registerPresenceHandlers = usePresenceHandlers();
   const registerGroupHandlers = useGroupHandlers();
   const registerTeamHandlers = useTeamHandlers();
   const registerUserHandlers = useUserHandlers();
@@ -929,6 +1089,9 @@ function WebsocketProvider({ children }: React.PropsWithChildren<object>) {
       registerDocumentHandlers(currentSocket);
       registerCollectionHandlers(currentSocket);
       registerCommentHandlers(currentSocket);
+      registerChatHandlers(currentSocket);
+      registerCallHandlers(currentSocket);
+      registerPresenceHandlers(currentSocket);
       registerGroupHandlers(currentSocket);
       registerTeamHandlers(currentSocket);
       registerUserHandlers(currentSocket);

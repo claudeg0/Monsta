@@ -4,6 +4,12 @@ node_modules/*
 .env
 .env.local
 .env.production
+# Any per-environment override, and any backup copy of an env file. Both
+# routinely end up holding real credentials while looking inert - a .bak of
+# .env.development with a live GOOGLE_CLIENT_SECRET in it was one `git add -A`
+# away from being published.
+.env*.local
+*.bak
 .log
 .vscode/*
 npm-debug.log

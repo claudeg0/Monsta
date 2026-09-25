@@ -18,6 +18,7 @@ import lazy from "~/utils/lazyWithRetry";
 import * as Scenes from "./scenes";
 import {
   archivePath,
+  chatPath,
   draftsPath,
   homePath,
   searchPath,
@@ -140,6 +141,10 @@ function AuthenticatedRoutes() {
                 exact
                 path={`${searchPath()}/:query?`}
                 component={Scenes.Search.Component}
+              />
+              <Route
+                path={`${chatPath()}/:channelId?`}
+                component={Scenes.Chat.Component}
               />
               {env.isDevelopment && (
                 <Route exact path={debugPath()} component={Debug} />

@@ -2,6 +2,7 @@ import presentApiKey from "./apiKey";
 import presentAttachment from "./attachment";
 import presentAuthenticationProvider from "./authenticationProvider";
 import presentAvailableTeam from "./availableTeam";
+import presentChannel from "./channel";
 import presentCollection from "./collection";
 import presentComment from "./comment";
 import presentDocument, { presentDocuments } from "./document";
@@ -15,6 +16,7 @@ import presentGroupUser from "./groupUser";
 import presentImport from "./import";
 import presentIntegration from "./integration";
 import presentMembership from "./membership";
+import presentMessage from "./message";
 import presentNavigationNode from "./navigationNode";
 import presentOAuthClient, { presentPublishedOAuthClient } from "./oauthClient";
 import presentPin from "./pin";
@@ -40,6 +42,7 @@ export {
   presentAttachment,
   presentAuthenticationProvider,
   presentAvailableTeam,
+  presentChannel,
   presentCollection,
   presentComment,
   presentDocument,
@@ -54,6 +57,7 @@ export {
   presentImport,
   presentIntegration,
   presentMembership,
+  presentMessage,
   presentNavigationNode,
   presentOAuthClient,
   presentPublishedOAuthClient,

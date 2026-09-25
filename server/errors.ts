@@ -260,6 +260,15 @@ export function RequestTimeoutError(
   });
 }
 
+export function VideoProviderError(
+  message = "The video call provider could not be reached"
+) {
+  return httpErrors(503, message, {
+    id: "video_provider_error",
+    isReportable: true,
+  });
+}
+
 export function ClientClosedRequestError(
   message = "Client closed request before response was received"
 ) {
