@@ -24,6 +24,7 @@ import { NotificationEventType } from "@shared/types";
 import { getBaseDomain } from "@shared/utils/domains";
 import env from "@server/env";
 import Model from "@server/models/base/Model";
+import Channel from "./Channel";
 import Collection from "./Collection";
 import Comment from "./Comment";
 import Document from "./Document";
@@ -163,6 +164,19 @@ class Notification extends Model<
   @ForeignKey(() => Comment)
   @Column(DataType.UUID)
   commentId: string;
+
+  /**
+   * The chat channel this notification aggregates, for chat message
+   * notifications. Null for every other notification type - the column
+   * exists so chat rows need no document association.
+   */
+  @BelongsTo(() => Channel, "channelId")
+  channel: Channel;
+
+  @AllowNull
+  @ForeignKey(() => Channel)
+  @Column(DataType.UUID)
+  channelId: string | null;
 
   @BelongsTo(() => Document, "documentId")
   document: Document;

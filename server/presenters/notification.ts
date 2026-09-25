@@ -22,6 +22,7 @@ export default async function presentNotification(
     comment: notification.comment
       ? presentComment(notification.comment)
       : undefined,
+    channelId: notification.channelId,
     documentId: notification.documentId,
     document: notification.document
       ? await presentDocument(ctx, notification.document)
