@@ -20,6 +20,7 @@ import {
 } from "@shared/types";
 import { parser, schema } from "@server/editor";
 import type { AuthenticationProvider } from "@server/models";
+import { ChannelType } from "@server/models/Channel";
 import {
   Share,
   Team,
@@ -44,6 +45,9 @@ import {
   SearchQuery,
   Pin,
   Comment,
+  Channel,
+  ChannelMembership,
+  Message,
   Import,
   OAuthAuthorizationCode,
   OAuthClient,
@@ -776,6 +780,86 @@ export async function buildNotification(
   }
 
   return Notification.create(overrides);
+}
+
+/**
+ * Builds a chat channel, creating memberships for `memberIds` (defaulting
+ * to just the creator) and attaching them to the returned instance.
+ *
+ * @param overrides channel fields plus optional memberIds
+ * @returns the created channel with memberships loaded
+ */
+export async function buildChannel(
+  overrides: Partial<Channel> & { memberIds?: string[] } = {}
+): Promise<Channel> {
+  const { memberIds, ...rest } = overrides;
+
+  if (!rest.teamId) {
+    const team = await buildTeam();
+    rest.teamId = team.id;
+  }
+
+  if (!rest.createdById) {
+    const user = await buildUser({ teamId: rest.teamId });
+    rest.createdById = user.id;
+  }
+
+  const channel = await Channel.create({
+    type: ChannelType.Group,
+    name: faker.lorem.words(3),
+    ...rest,
+  });
+
+  await ChannelMembership.bulkCreate(
+    (memberIds ?? [rest.createdById]).map((userId) => ({
+      channelId: channel.id,
+      userId,
+    }))
+  );
+  channel.memberships = await ChannelMembership.findAll({
+    where: { channelId: channel.id },
+  });
+
+  return channel;
+}
+
+/**
+ * Adds a member to an existing channel.
+ *
+ * @param channelId the channel to add the user to
+ * @param userId the user to add
+ * @returns the created membership
+ */
+export async function buildChannelMembership({
+  channelId,
+  userId,
+  ...overrides
+}: {
+  channelId: string;
+  userId: string;
+} & Partial<ChannelMembership>): Promise<ChannelMembership> {
+  return ChannelMembership.create({ channelId, userId, ...overrides });
+}
+
+/**
+ * Builds a chat message with a simple one-paragraph ProseMirror body
+ * unless data is overridden.
+ *
+ * @param overrides message fields; data defaults to a paragraph of text
+ * @returns the created message
+ */
+export async function buildMessage(
+  overrides: Partial<Message> & { channelId: string; createdById: string }
+): Promise<Message> {
+  return Message.create({
+    data: buildProseMirrorDoc([
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: faker.lorem.sentence() }],
+      },
+    ]).toJSON(),
+    ...overrides,
+  });
 }
 
 export async function buildSearchQuery(

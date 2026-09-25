@@ -9,11 +9,13 @@ import type {
   DocumentUserEvent,
   DocumentGroupEvent,
   CommentReactionEvent,
+  MessageEvent,
 } from "@server/types";
 import CollectionAddUserNotificationsTask from "../tasks/CollectionAddUserNotificationsTask";
 import CollectionCreatedNotificationsTask from "../tasks/CollectionCreatedNotificationsTask";
 import CommentCreatedNotificationsTask from "../tasks/CommentCreatedNotificationsTask";
 import CommentUpdatedNotificationsTask from "../tasks/CommentUpdatedNotificationsTask";
+import MessageCreatedNotificationsTask from "../tasks/MessageCreatedNotificationsTask";
 import ReactionCreatedNotificationsTask from "../tasks/ReactionCreatedNotificationsTask";
 import ReactionRemovedNotificationsTask from "../tasks/ReactionRemovedNotificationsTask";
 import DocumentAccessRequestNotificationsTask from "../tasks/DocumentAccessRequestNotificationsTask";
@@ -39,6 +41,7 @@ export default class NotificationsProcessor extends BaseProcessor {
     "comments.update",
     "comments.add_reaction",
     "comments.remove_reaction",
+    "messages.create",
   ];
 
   async perform(event: Event) {
@@ -67,6 +70,8 @@ export default class NotificationsProcessor extends BaseProcessor {
         return this.reactionCreated(event);
       case "comments.remove_reaction":
         return this.reactionRemoved(event);
+      case "messages.create":
+        return this.messageCreated(event);
       default:
     }
   }
@@ -145,5 +150,9 @@ export default class NotificationsProcessor extends BaseProcessor {
 
   async reactionRemoved(event: CommentReactionEvent) {
     await new ReactionRemovedNotificationsTask().schedule(event);
+  }
+
+  async messageCreated(event: MessageEvent) {
+    await new MessageCreatedNotificationsTask().schedule(event);
   }
 }

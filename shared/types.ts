@@ -575,6 +575,13 @@ export enum NotificationEventType {
   Features = "emails.features",
   ExportCompleted = "emails.export_completed",
   RequestDocumentAccess = "access_requests.create",
+  /**
+   * Aggregated chat message notification - one row per (user, channel),
+   * carrying a messageCount in its data. Deliberately named apart from the
+   * `messages.create` queue event (websocket fan-out); see
+   * MessageCreatedNotificationsTask.
+   */
+  CreateChatMessages = "channels.message",
 }
 
 export enum NotificationChannelType {
@@ -585,6 +592,13 @@ export enum NotificationChannelType {
 
 export type NotificationData = {
   emoji?: string;
+  /**
+   * Aggregated chat notification state: how many messages the row covers
+   * and the latest message's plain-text snippet. Only set on
+   * `channels.message` notifications.
+   */
+  messageCount?: number;
+  snippet?: string;
 };
 
 export type NotificationSettings = {
@@ -615,6 +629,7 @@ export const NotificationEventDefaults: Record<NotificationEventType, boolean> =
     [NotificationEventType.AddUserToDocument]: true,
     [NotificationEventType.AddUserToCollection]: true,
     [NotificationEventType.RequestDocumentAccess]: true,
+    [NotificationEventType.CreateChatMessages]: true,
   };
 
 export enum UnfurlResourceType {
