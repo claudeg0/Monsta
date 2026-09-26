@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import { t } from "i18next";
 import { action, computed, observable } from "mobx";
 import type { NotificationData } from "@shared/types";
 import { NotificationEventType } from "@shared/types";
@@ -9,6 +10,7 @@ import {
   documentPath,
   settingsPath,
 } from "~/utils/routeHelpers";
+import { ChannelType } from "./Channel";
 import Collection from "./Collection";
 import Comment from "./Comment";
 import Document from "./Document";
@@ -240,8 +242,9 @@ class Notification extends Model {
   }
 
   /**
-   * Returns the subject of the notification. This is the title of the associated
-   * document.
+   * Returns the subject of the notification: the associated document's
+   * title, collection's name, or - for chat notifications - the channel's
+   * label ("Direct Message" for DMs, the channel name for groups).
    *
    * @returns The subject
    */
@@ -253,25 +256,18 @@ class Notification extends Model {
       return this.collection?.name ?? "a collection";
     }
     if (this.channelId) {
-      // DMs have no server-side name - the chat UI derives one from the
-      // other participant. Reuse the loaded channel when we have it, and
-      // fall back gracefully when chat state isn't loaded in this tab.
       const channel = this.store.rootStore.channels.get(this.channelId);
       if (channel) {
-        if (channel.name) {
-          return channel.name;
+        // DMs render as "Direct Message" rather than the other person's
+        // name - the panel lists notification sources, and naming the DM
+        // would surface who messaged into a row that may aggregate
+        // several people. Group channels keep their name.
+        if (channel.type === ChannelType.DirectMessage) {
+          return t("Direct Message");
         }
-        const otherId = channel.memberIds?.find(
-          (id) => id !== this.store.rootStore.auth.user?.id
-        );
-        const other = otherId
-          ? this.store.rootStore.users.get(otherId)
-          : undefined;
-        if (other) {
-          return other.name;
-        }
+        return channel.name ?? t("a conversation");
       }
-      return "a conversation";
+      return t("a conversation");
     }
     return "Unknown";
   }

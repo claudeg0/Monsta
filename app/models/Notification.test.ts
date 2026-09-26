@@ -57,7 +57,7 @@ describe("Notification chat rows", () => {
     expect(notification.subject).toBe("Engineering");
   });
 
-  test("subject derives a DM name from the other participant", () => {
+  test("subject renders Direct Message for DMs regardless of participants", () => {
     const me = stores.users.add({
       id: "33333333-3333-3333-3333-333333333333",
       name: "Me",
@@ -79,7 +79,7 @@ describe("Notification chat rows", () => {
     const notification = addChatNotification(
       "22222222-2222-2222-2222-222222222222"
     );
-    expect(notification.subject).toBe("Steph");
+    expect(notification.subject).toBe("Direct Message");
   });
 
   test("subject falls back gracefully when the channel is not loaded", () => {
