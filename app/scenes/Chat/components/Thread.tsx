@@ -167,8 +167,9 @@ function Thread({ channelId }: Props) {
   // feed for chat-notification suppression: the notification task skips any
   // recipient whose membership.lastReadAt covers the message (see
   // docs/chat-notifications-plan.md). Own messages included - having just
-  // sent one, the sender has read it.
-  const newestMessageId = channelMessages[0]?.id;
+  // sent one, the sender has read it. inChannel() is oldest-first, so the
+  // newest message is the last element.
+  const newestMessageId = channelMessages[channelMessages.length - 1]?.id;
   React.useEffect(() => {
     if (newestMessageId) {
       void channels.markRead(channelId);
