@@ -1,5 +1,11 @@
 import type { InferAttributes, InferCreationAttributes } from "sequelize";
-import { BelongsTo, Column, DataType, ForeignKey, Table } from "sequelize-typescript";
+import {
+  BelongsTo,
+  Column,
+  DataType,
+  ForeignKey,
+  Table,
+} from "sequelize-typescript";
 import Channel from "./Channel";
 import User from "./User";
 import IdModel from "./base/IdModel";

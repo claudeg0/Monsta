@@ -25,7 +25,9 @@ describe("Channel call fields", () => {
 
     expect(channel.callId).toBe("22222222-2222-2222-2222-222222222222");
     expect(channel.callStartedAt).toBe("2026-09-23T00:00:00.000Z");
-    expect(channel.callStartedById).toBe("33333333-3333-3333-3333-333333333333");
+    expect(channel.callStartedById).toBe(
+      "33333333-3333-3333-3333-333333333333"
+    );
     expect(channel.callInProgress).toBe(true);
   });
 

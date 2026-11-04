@@ -189,7 +189,9 @@ export default class UsersStore extends Store<User> {
    */
   forChatPicker = (excludeIds: string[], query = "") => {
     const excludeSet = new Set(excludeIds);
-    const users = this.activeOrInvited.filter((user) => !excludeSet.has(user.id));
+    const users = this.activeOrInvited.filter(
+      (user) => !excludeSet.has(user.id)
+    );
     return queriedUsers(users, query);
   };
 

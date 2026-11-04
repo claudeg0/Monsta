@@ -28,13 +28,15 @@ router.post(
 
     // Step 1: authorize against the parent channel first - this is the
     // actual privacy boundary (DM/group membership), not the message.
-    const channel = await Channel.scope("withMemberships").findByPk(
-      channelId,
-      { transaction, rejectOnEmpty: true }
-    );
+    const channel = await Channel.scope("withMemberships").findByPk(channelId, {
+      transaction,
+      rejectOnEmpty: true,
+    });
     authorize(user, "createMessage", channel);
 
-    const data = text ? commentParser.parse(text).toJSON() : ctx.input.body.data;
+    const data = text
+      ? commentParser.parse(text).toJSON()
+      : ctx.input.body.data;
     const messageId = id || uuidv4();
 
     // Step 2: only after the channel check passes, create the message.
@@ -67,10 +69,9 @@ router.post(
     const { user } = ctx.state.auth;
 
     // Step 1: channel membership gates read access to every message in it.
-    const channel = await Channel.scope("withMemberships").findByPk(
-      channelId,
-      { rejectOnEmpty: true }
-    );
+    const channel = await Channel.scope("withMemberships").findByPk(channelId, {
+      rejectOnEmpty: true,
+    });
     authorize(user, "read", channel);
 
     const where = { channelId };
@@ -128,7 +129,9 @@ router.post(
     // Step 2: author-only (or admin) - see server/policies/message.ts.
     authorize(user, "update", message);
 
-    const data = text ? commentParser.parse(text).toJSON() : ctx.input.body.data;
+    const data = text
+      ? commentParser.parse(text).toJSON()
+      : ctx.input.body.data;
     if (data !== undefined) {
       message.data = data;
       message.editedAt = new Date();

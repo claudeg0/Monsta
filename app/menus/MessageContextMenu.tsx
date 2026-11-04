@@ -35,10 +35,7 @@ export const MessageContextMenu = observer(function MessageContextMenu_({
   const action = useMessageMenuAction({ message, onEdit, onDelete });
 
   return (
-    <ContextMenu
-      action={action}
-      ariaLabel={t("Message options")}
-    >
+    <ContextMenu action={action} ariaLabel={t("Message options")}>
       {children}
     </ContextMenu>
   );

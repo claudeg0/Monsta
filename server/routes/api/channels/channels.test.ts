@@ -28,17 +28,14 @@ function mockDailySuccess() {
       dailyCalls.push({ method: "POST", path: "rooms", body });
       return HttpResponse.json({ name: body.name });
     }),
-    http.post(
-      "https://api.daily.co/v1/meeting-tokens",
-      async ({ request }) => {
-        dailyCalls.push({
-          method: "POST",
-          path: "meeting-tokens",
-          body: (await request.json()) as Record<string, unknown>,
-        });
-        return HttpResponse.json({ token: "test-meeting-token" });
-      }
-    ),
+    http.post("https://api.daily.co/v1/meeting-tokens", async ({ request }) => {
+      dailyCalls.push({
+        method: "POST",
+        path: "meeting-tokens",
+        body: (await request.json()) as Record<string, unknown>,
+      });
+      return HttpResponse.json({ token: "test-meeting-token" });
+    }),
     http.delete("https://api.daily.co/v1/rooms/:name", ({ params }) => {
       dailyCalls.push({
         method: "DELETE",
@@ -237,7 +234,9 @@ describe("#channels.endCall", () => {
     expect(channel.callStartedAt).toBeNull();
     expect(channel.callStartedById).toBeNull();
     expect(
-      dailyCalls.some((c) => c.method === "DELETE" && c.path === `rooms/${callId}`)
+      dailyCalls.some(
+        (c) => c.method === "DELETE" && c.path === `rooms/${callId}`
+      )
     ).toBe(true);
     await expect(
       Event.count({

@@ -204,7 +204,10 @@ router.post(
     // when messages arrive means no write on the hot path, and no way for a
     // reply to land in a list its recipient has made permanently invisible.
     const hiddenAtByChannel = new Map(
-      memberships.map((membership) => [membership.channelId, membership.hiddenAt])
+      memberships.map((membership) => [
+        membership.channelId,
+        membership.hiddenAt,
+      ])
     );
     const visible = channels.filter((channel) => {
       const hiddenAt = hiddenAtByChannel.get(channel.id);
@@ -329,7 +332,11 @@ router.post(
     }
 
     const invitee = await User.findOne({
-      where: { id: userId, teamId: user.teamId, suspendedAt: { [Op.is]: null } },
+      where: {
+        id: userId,
+        teamId: user.teamId,
+        suspendedAt: { [Op.is]: null },
+      },
       transaction,
     });
     if (!invitee) {

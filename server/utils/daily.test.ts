@@ -1,12 +1,7 @@
 import { http, HttpResponse } from "msw";
 import env from "@server/env";
 import { server } from "@server/test/msw";
-import {
-  createMeetingToken,
-  createRoom,
-  deleteRoom,
-  roomUrl,
-} from "./daily";
+import { createMeetingToken, createRoom, deleteRoom, roomUrl } from "./daily";
 
 const callId = "6f1c9a2e-3b4d-4e5f-8a0b-1c2d3e4f5a6b";
 
@@ -26,7 +21,9 @@ function mockDaily(
       capturedRequest = {
         method: request.method,
         authorization: request.headers.get("authorization"),
-        body: request.body ? ((await request.json()) as Record<string, unknown>) : null,
+        body: request.body
+          ? ((await request.json()) as Record<string, unknown>)
+          : null,
       };
       return response();
     })

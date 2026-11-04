@@ -698,7 +698,9 @@ function useChatHandlers() {
 
     socket.on("messages.create", (event: PartialExcept<Message, "id">) => {
       messages.add(event);
-      const channel = event.channelId ? channels.get(event.channelId) : undefined;
+      const channel = event.channelId
+        ? channels.get(event.channelId)
+        : undefined;
 
       // A conversation the viewer hid is removed from this store, but their
       // socket stays in its room - so this is how a hidden conversation comes

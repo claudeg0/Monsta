@@ -40,8 +40,8 @@ function ChannelLeaveDialog({ channel, onSubmit }: Props) {
       <Text as="p" type="secondary">
         <Trans>
           You'll stop receiving messages here and it will disappear from your
-          list. You can't rejoin on your own - someone still in the
-          conversation would have to add you back.
+          list. You can't rejoin on your own - someone still in the conversation
+          would have to add you back.
         </Trans>
       </Text>
     </ConfirmationDialog>

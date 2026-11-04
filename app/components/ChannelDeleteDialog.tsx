@@ -41,8 +41,8 @@ function ChannelDeleteDialog({ channel, onSubmit }: Props) {
       <Text as="p" type="secondary">
         <Trans>
           This removes the conversation from your list only. No messages are
-          deleted, the other people in it keep their copy, and it will come
-          back here if someone sends a new message.
+          deleted, the other people in it keep their copy, and it will come back
+          here if someone sends a new message.
         </Trans>
       </Text>
     </ConfirmationDialog>

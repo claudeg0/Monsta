@@ -29,15 +29,11 @@ module.exports = {
       // One live chat notification per (user, channel) - viewed rows fall
       // outside the constraint, so chat notification history is allowed to
       // accumulate and be pruned by the cleanup task.
-      await queryInterface.addIndex(
-        "notifications",
-        ["userId", "channelId"],
-        {
-          unique: true,
-          where: { event: "channels.message", viewedAt: null },
-          transaction,
-        }
-      );
+      await queryInterface.addIndex("notifications", ["userId", "channelId"], {
+        unique: true,
+        where: { event: "channels.message", viewedAt: null },
+        transaction,
+      });
     });
   },
 

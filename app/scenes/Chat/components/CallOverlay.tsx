@@ -35,8 +35,7 @@ function CallOverlay() {
   const [isEnding, setEnding] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const { isOpen, isJoined, isLastParticipant, channelId, session } =
-    callStore;
+  const { isOpen, isJoined, isLastParticipant, channelId, session } = callStore;
 
   // The overlay covers the viewport, but on its own nothing stops the page
   // behind it scrolling in response to touch gestures (iOS in particular) -

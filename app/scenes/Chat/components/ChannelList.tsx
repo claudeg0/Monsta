@@ -76,8 +76,7 @@ const ChannelListItem = observer(function ChannelListItem_({
   };
 
   const isDirectMessage = channel.type === ChannelType.DirectMessage;
-  const isLoadingOtherUser =
-    isDirectMessage && !otherUser && isLoadingUsers;
+  const isLoadingOtherUser = isDirectMessage && !otherUser && isLoadingUsers;
   const title = isDirectMessage
     ? (otherUser?.name ??
       (isLoadingOtherUser ? t("Loading…") : t("Unknown user")))
@@ -100,42 +99,41 @@ const ChannelListItem = observer(function ChannelListItem_({
       <Item $selected={isSelected} onClick={onSelect}>
         <Flex align="center" gap={8}>
           <AvatarWrapper>
-          {otherUser ? (
-            <Avatar model={otherUser} />
-          ) : (
-            <GroupAvatarPlaceholder>{title[0]}</GroupAvatarPlaceholder>
-          )}
-          {isDirectMessage && otherUser && chatPresence.isOnline(otherUser.id) && (
-            <OnlineDot />
-          )}
-        </AvatarWrapper>
-        <Flex column>
-          <Text weight={channel.isUnread ? "bold" : undefined} size="small">
-            {title}
-          </Text>
-          {!isDirectMessage && onlineCount > 0 && (
-            <Text size="xsmall" type="tertiary">
-              {t("{{ count }} online", { count: onlineCount })}
+            {otherUser ? (
+              <Avatar model={otherUser} />
+            ) : (
+              <GroupAvatarPlaceholder>{title[0]}</GroupAvatarPlaceholder>
+            )}
+            {isDirectMessage &&
+              otherUser &&
+              chatPresence.isOnline(otherUser.id) && <OnlineDot />}
+          </AvatarWrapper>
+          <Flex column>
+            <Text weight={channel.isUnread ? "bold" : undefined} size="small">
+              {title}
             </Text>
+            {!isDirectMessage && onlineCount > 0 && (
+              <Text size="xsmall" type="tertiary">
+                {t("{{ count }} online", { count: onlineCount })}
+              </Text>
+            )}
+          </Flex>
+          {channel.callInProgress && (
+            <Tooltip content={t("Join call")}>
+              <CallBadge onClick={handleJoinCall} aria-label={t("Join call")}>
+                <CameraIcon size={16} />
+              </CallBadge>
+            </Tooltip>
           )}
-        </Flex>
-        {channel.callInProgress && (
-          <Tooltip content={t("Join call")}>
-            <CallBadge
-              onClick={handleJoinCall}
-              aria-label={t("Join call")}
+          {channel.isUnread && (
+            <UnreadBadge
+              aria-label={t("{{ count }} unread", {
+                count: channel.unreadCount,
+              })}
             >
-              <CameraIcon size={16} />
-            </CallBadge>
-          </Tooltip>
-        )}
-        {channel.isUnread && (
-          <UnreadBadge aria-label={t("{{ count }} unread", {
-            count: channel.unreadCount,
-          })}>
-            {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
-          </UnreadBadge>
-        )}
+              {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
+            </UnreadBadge>
+          )}
           {/* Stops opening the menu from also selecting the conversation
            * behind it, since the whole row is a click target. */}
           <EventBoundary>

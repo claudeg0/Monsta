@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "monsta-dev": {
+      "type": "http",
+      "url": "https://dev-wiki.immersivebeginnings.us/mcp"
+    }
+  }
+}

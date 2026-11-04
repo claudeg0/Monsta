@@ -134,8 +134,6 @@ describe("#daily.webhook", () => {
 
     expect(first.status).toEqual(200);
     expect(second.status).toEqual(200);
-    await expect(
-      Channel.count({ where: { callId } })
-    ).resolves.toEqual(0);
+    await expect(Channel.count({ where: { callId } })).resolves.toEqual(0);
   });
 });

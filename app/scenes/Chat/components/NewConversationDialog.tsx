@@ -27,7 +27,9 @@ type Props = {
 function NewConversationDialog({ onCreated }: Props) {
   const { t } = useTranslation();
   const { channels } = useStores();
-  const [type, setType] = React.useState<ChannelType>(ChannelType.DirectMessage);
+  const [type, setType] = React.useState<ChannelType>(
+    ChannelType.DirectMessage
+  );
   const [userIds, setUserIds] = React.useState<string[]>([]);
   const [name, setName] = React.useState("");
   const [isSubmitting, setSubmitting] = React.useState(false);
