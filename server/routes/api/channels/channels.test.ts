@@ -1,5 +1,7 @@
+import { subHours } from "date-fns";
 import { http, HttpResponse } from "msw";
 import { v4 as uuidv4 } from "uuid";
+import { Hour } from "@shared/utils/time";
 import env from "@server/env";
 import { Event } from "@server/models";
 import { buildChannel, buildUser } from "@server/test/factories";
@@ -23,6 +25,16 @@ let dailyCalls: DailyCall[];
 
 function mockDailySuccess() {
   mswServer.use(
+    http.get("https://api.daily.co/v1/rooms/:name", ({ params }) => {
+      const name = String(params.name);
+      dailyCalls.push({ method: "GET", path: `rooms/${name}`, body: null });
+      // Joinable by default - a room whose expiry has passed or that no
+      // longer exists is mocked per-test on top of this.
+      return HttpResponse.json({
+        name,
+        config: { exp: Math.floor(Date.now() / 1000) + Hour.seconds },
+      });
+    }),
     http.post("https://api.daily.co/v1/rooms", async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       dailyCalls.push({ method: "POST", path: "rooms", body });
@@ -131,6 +143,10 @@ describe("#channels.startCall", () => {
     expect(body.call.id).toEqual(callId);
     expect(body.call.url).toEqual(`https://test.daily.co/${callId}`);
     expect(body.call.token).toEqual("test-meeting-token");
+    // The existing room was verified as joinable before the token was minted.
+    expect(
+      dailyCalls.some((c) => c.method === "GET" && c.path === `rooms/${callId}`)
+    ).toBe(true);
     expect(dailyCalls.some((c) => c.path === "rooms")).toBe(false);
 
     const tokenCall = dailyCalls.find((c) => c.path === "meeting-tokens");
@@ -147,6 +163,149 @@ describe("#channels.startCall", () => {
         where: { name: "channels.call_started", modelId: channel.id },
       })
     ).resolves.toEqual(0);
+  });
+
+  it("should replace a stale call whose room no longer exists at Daily", async () => {
+    const starter = await buildUser();
+    const callId = uuidv4();
+    const channel = await buildChannel({
+      teamId: starter.teamId,
+      createdById: starter.id,
+      callId,
+      callStartedAt: subHours(new Date(), 2),
+      callStartedById: starter.id,
+    });
+    mswServer.use(
+      http.get("https://api.daily.co/v1/rooms/:name", () =>
+        HttpResponse.json({}, { status: 404 })
+      )
+    );
+
+    const res = await server.post("/api/channels.startCall", starter, {
+      body: { id: channel.id },
+    });
+    const body = await res.json();
+
+    expect(res.status).toEqual(200);
+    // A fresh room was created and joined instead of the dead one.
+    expect(body.call.id).not.toEqual(callId);
+    expect(body.data.callId).toEqual(body.call.id);
+    expect(
+      dailyCalls.some((c) => c.method === "POST" && c.path === "rooms")
+    ).toBe(true);
+    // The ghost call was cleared - clients see it end and the new one start.
+    expect(
+      dailyCalls.some(
+        (c) => c.method === "DELETE" && c.path === `rooms/${callId}`
+      )
+    ).toBe(true);
+    await expect(
+      Event.count({
+        where: { name: "channels.call_ended", modelId: channel.id },
+      })
+    ).resolves.toEqual(1);
+    await channel.reload();
+    expect(channel.callId).toEqual(body.call.id);
+  });
+
+  it("should replace a stale call whose room is past its join expiry", async () => {
+    const starter = await buildUser();
+    const callId = uuidv4();
+    const channel = await buildChannel({
+      teamId: starter.teamId,
+      createdById: starter.id,
+      callId,
+      callStartedAt: subHours(new Date(), 2),
+      callStartedById: starter.id,
+    });
+    mswServer.use(
+      http.get("https://api.daily.co/v1/rooms/:name", ({ params }) =>
+        HttpResponse.json({
+          name: String(params.name),
+          config: { exp: Math.floor(Date.now() / 1000) - 60 },
+        })
+      )
+    );
+
+    const res = await server.post("/api/channels.startCall", starter, {
+      body: { id: channel.id },
+    });
+    const body = await res.json();
+
+    // An expired room refuses new joins, so self-healing starts a fresh one.
+    expect(res.status).toEqual(200);
+    expect(body.call.id).not.toEqual(callId);
+    expect(
+      dailyCalls.some((c) => c.method === "POST" && c.path === "rooms")
+    ).toBe(true);
+    await expect(
+      Event.count({
+        where: { name: "channels.call_ended", modelId: channel.id },
+      })
+    ).resolves.toEqual(1);
+    await channel.reload();
+    expect(channel.callId).toEqual(body.call.id);
+  });
+
+  it("should fall back to joining when the room cannot be verified", async () => {
+    const starter = await buildUser();
+    const callId = uuidv4();
+    const channel = await buildChannel({
+      teamId: starter.teamId,
+      createdById: starter.id,
+      callId,
+      callStartedAt: new Date(),
+      callStartedById: starter.id,
+    });
+    mswServer.use(
+      http.get("https://api.daily.co/v1/rooms/:name", () =>
+        HttpResponse.json({}, { status: 500 })
+      )
+    );
+
+    const res = await server.post("/api/channels.startCall", starter, {
+      body: { id: channel.id },
+    });
+    const body = await res.json();
+
+    // A provider hiccup during verification degrades to the pre-existing
+    // join behavior rather than failing the request.
+    expect(res.status).toEqual(200);
+    expect(body.call.id).toEqual(callId);
+    expect(
+      dailyCalls.some((c) => c.method === "POST" && c.path === "rooms")
+    ).toBe(false);
+    await channel.reload();
+    expect(channel.callId).toEqual(callId);
+    await expect(
+      Event.count({
+        where: { name: "channels.call_ended", modelId: channel.id },
+      })
+    ).resolves.toEqual(0);
+  });
+
+  it("should skip room verification when Daily is not configured", async () => {
+    env.DAILY_API_KEY = undefined;
+    const starter = await buildUser();
+    const callId = uuidv4();
+    const channel = await buildChannel({
+      teamId: starter.teamId,
+      createdById: starter.id,
+      callId,
+      callStartedAt: new Date(),
+      callStartedById: starter.id,
+    });
+
+    const res = await server.post("/api/channels.startCall", starter, {
+      body: { id: channel.id },
+    });
+
+    // No verification request is made; the call still fails at token
+    // minting exactly as it would have without the self-heal path.
+    expect(res.status).toEqual(503);
+    expect(dailyCalls.some((c) => c.method === "GET")).toBe(false);
+    await channel.reload();
+    expect(channel.callId).toEqual(callId);
   });
 
   it("should return 403 for a non-member", async () => {

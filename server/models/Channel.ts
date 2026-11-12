@@ -9,6 +9,7 @@ import {
   Table,
 } from "sequelize-typescript";
 import { v4 as uuidv4 } from "uuid";
+import env from "@server/env";
 import Logger from "@server/logging/Logger";
 import type { APIContext } from "@server/types";
 import type { CallSession } from "@server/utils/daily";
@@ -16,6 +17,8 @@ import {
   createMeetingToken,
   createRoom,
   deleteRoom,
+  getRoom,
+  isRoomExpired,
   roomUrl,
 } from "@server/utils/daily";
 import ChannelMembership from "./ChannelMembership";
@@ -99,7 +102,11 @@ class Channel extends IdModel<
    * persisted, and a `channels.call_started` event is published; if the
    * persist fails the room is deleted again so it can't linger unreferenced.
    * On the join path nothing is written and no event is published - only a
-   * fresh meeting token is minted for the existing room.
+   * fresh meeting token is minted for the existing room, after verifying the
+   * room still exists and accepts joins. A recorded call whose room is gone
+   * or past its join expiry (a stale state left behind by a missed
+   * `call_ended`) is ended first - clearing the columns and publishing
+   * `channels.call_ended` - and the caller seamlessly gets a fresh room.
    *
    * @param ctx the API context of the member starting or joining the call
    * @returns the session (room url and meeting token) for the caller
@@ -109,13 +116,20 @@ class Channel extends IdModel<
   public async startCall(ctx: APIContext): Promise<CallSession> {
     const { user } = ctx.state.auth;
 
-    if (this.callId) {
+    if (this.callId && (await this.canRejoinCall(this.callId))) {
       const token = await createMeetingToken({
         roomName: this.callId,
         userName: user.name,
         userId: user.id,
       });
       return { id: this.callId, url: roomUrl(this.callId), token };
+    }
+
+    if (this.callId) {
+      // The recorded call outlived its room. Clear it - publishing
+      // call_ended so other clients drop the ghost "call in progress" -
+      // before falling through to a fresh room.
+      await this.endCall(ctx);
     }
 
     const callId = uuidv4();
@@ -180,6 +194,36 @@ class Channel extends IdModel<
       });
     }
     return true;
+  }
+
+  /**
+   * Whether the recorded call's room can still be joined - it exists at
+   * Daily and has not passed its join-backstop expiry.
+   *
+   * Deliberately returns true when verification isn't possible - Daily not
+   * configured (local/test environments), or unreachable - preserving the
+   * pre-verification join behavior: minting the token then fails exactly as
+   * it would have otherwise, so verification can never make starting a call
+   * worse.
+   *
+   * @param callId the recorded call id, which is the Daily room name
+   * @returns whether the caller should join the existing call
+   */
+  private async canRejoinCall(callId: string): Promise<boolean> {
+    if (!env.DAILY_API_KEY) {
+      return true;
+    }
+
+    try {
+      const room = await getRoom(callId);
+      return room !== null && !isRoomExpired(room);
+    } catch (err) {
+      Logger.warn("Failed to verify existing call room", {
+        callId,
+        error: String(err),
+      });
+      return true;
+    }
   }
 
   // associations
